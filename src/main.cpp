@@ -656,14 +656,14 @@ void __time_critical_func(render_core)() {
     __unreachable();
 }
 
-static int current_height = 0;
-static int current_width = 0;
-
 uint8_t *osd_gfx_framebuffer(int width, int height)
 {
     int offset_center = 16 + ((XBUF_WIDTH - width) / 2);
     return (uint8_t *)SCREEN + offset_center;
 }
+
+int frame, frame_cnt = 0;
+int frame_timer_start = 0;
 
 int main() {
     overclock();
@@ -691,7 +691,6 @@ int main() {
         sleep_ms(33);
         gpio_put(PICO_DEFAULT_LED_PIN, false);
     }
-
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);
         filebrowser(HOME_DIR, "pce");
@@ -722,6 +721,17 @@ int main() {
 
             psg_update((int16_t *) audio_buffer, AUDIO_BUFFER_LENGTH, 0xff);
             i2s_dma_write(&i2s_config, (const int16_t *) audio_buffer);
+
+
+            frame++;
+            if (1) {
+
+                if (++frame_cnt == 5) {
+                    while (time_us_64() - frame_timer_start < 20000 * 5);  // 60 Hz
+                    frame_timer_start = time_us_64();
+                    frame_cnt = 0;
+                }
+            }
 
             tight_loop_contents();
         }

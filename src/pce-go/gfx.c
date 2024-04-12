@@ -306,6 +306,7 @@ gfx_latch_context(int force)
 }
 
 
+extern uint8_t SCREEN[];
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
 */

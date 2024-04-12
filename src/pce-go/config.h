@@ -8,4 +8,4 @@
 #define ENABLE_SND_TRACING     0
 #define ENABLE_IO_TRACING      0
 
-#define USE_MEM_MACROS         1
+#define USE_MEM_MACROS         0

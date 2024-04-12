@@ -117,11 +117,6 @@ void __time_critical_func() dma_handler_VGA() {
         case CGA_640x200x2:
         case TGA_320x200x16:
         case EGA_320x200x16x4:
-        case GRAPHICSMODE_ASPECT:
-            line_number = screen_line / 2;
-            if (screen_line % 2) return;
-            y = screen_line / 2 - graphics_buffer_shift_y;
-            break;
         case GRAPHICSMODE_DEFAULT:
             line_number = screen_line / 2;
             if (screen_line % 2) return;
@@ -212,7 +207,7 @@ void __time_critical_func() dma_handler_VGA() {
     // uint8_t* vbuf8=vbuf+(line*g_buf_width/2); //4bit buf
     //uint8_t* vbuf8=vbuf+(line*g_buf_width/4); //2bit buf
     //uint8_t* vbuf8=vbuf+((line&1)*8192+(line>>1)*g_buf_width/4);
-    uint8_t* input_buffer_8bit;// = input_buffer + y / 2 * 80 + (y & 1) * 8192;
+    uint8_t* input_buffer_8bit = input_buffer + y / 2 * 80 + (y & 1) * 8192;
 
 
     //output_buffer = &lines_pattern[2 + ((line_number) & 1)];
@@ -312,18 +307,14 @@ void __time_critical_func() dma_handler_VGA() {
             }
             break;
         }
+        // Это только для sega
         case GRAPHICSMODE_DEFAULT:
-            input_buffer_8bit = 16+(input_buffer + y * (352+16));
+            input_buffer_8bit = 72+(input_buffer + y * (352+16));
             for (int i = width; i--;) {
                 *output_buffer_16bit++ = current_palette[*input_buffer_8bit++];
             }
             break;
-        case GRAPHICSMODE_ASPECT:
-            input_buffer_8bit = input_buffer + y * width;
-            for (int i = width; i--;) {
-                *output_buffer_16bit++ = current_palette[*input_buffer_8bit++];
-            }
-            break;
+
         default:
             break;
     }
@@ -386,7 +377,6 @@ void graphics_set_mode(enum graphics_mode_t mode) {
         case CGA_320x200x4:
         case CGA_160x200x16:
         case GRAPHICSMODE_DEFAULT:
-        case GRAPHICSMODE_ASPECT:
         case EGA_320x200x16x4:
         case TGA_320x200x16:
 

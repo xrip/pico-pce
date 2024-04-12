@@ -28,18 +28,14 @@ static const uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
 
 
 char __uninitialized_ram(filename[256]);
-static uint32_t __uninitialized_ram(rom_size)
-= 0;
-bool aspect_ratio = false;
-int ghosting = 0;
+static uint32_t __uninitialized_ram(rom_size);
 
 static FATFS fs;
 bool reboot = false;
-bool limit_fps = false;
 semaphore vga_start_semaphore;
 
-uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
-int16_t audio_buffer[AUDIO_BUFFER_LENGTH * 2];
+alignas(4) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
+alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
 
 struct input_bits_t {
     bool a: true;
@@ -92,10 +88,6 @@ void nespad_tick() {
     // if (gamepad1_bits.down) smsSystem|=INPUT_HARD_RESET;
     //supervision_set_input(controls_state);
 }
-
-
-uint_fast32_t frames = 0;
-uint64_t start_time;
 
 
 i2s_config_t i2s_config;
@@ -470,16 +462,11 @@ bool load() {
 const MenuItem menu_items[] = {
         { "Swap AB <> BA: %s", ARRAY, &swap_ab, nullptr, 1, { "NO ", "YES" }},
         {},
-        { "Ghosting pix: %i ", INT, &ghosting, nullptr, 8 },
-//        { "Palette: %i ", INT, &palette_index, nullptr, SV_COLOR_SCHEME_COUNT },
-#if VGA
-        { "Keep aspect ratio: %s", ARRAY, &aspect_ratio, nullptr, 1, { "NO ", "YES" }},
-#endif
         //{ "Player 1: %s",        ARRAY, &player_1_input, 2, { "Keyboard ", "Gamepad 1", "Gamepad 2" }},
         //{ "Player 2: %s",        ARRAY, &player_2_input, 2, { "Keyboard ", "Gamepad 1", "Gamepad 2" }},
-        {},
-        { "Save state: %i", INT, &save_slot, &save, 5 },
-        { "Load state: %i", INT, &save_slot, &load, 5 },
+//        {},
+//        { "Save state: %i", INT, &save_slot, &save, 5 },
+//        { "Load state: %i", INT, &save_slot, &load, 5 },
         {},
         {
                 "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
@@ -634,12 +621,13 @@ void __time_critical_func(render_core)() {
     __unreachable();
 }
 
-int frame, frame_cnt = 0;
-int frame_timer_start = 0;
+static int current_height = 0;
+static int current_width = 0;
 
-uint8_t *osd_gfx_framebuffer(int width, int height) {
-    //printf("%d x %d\r\n", width, height);
-    return (uint8_t *) SCREEN + 16;
+uint8_t *osd_gfx_framebuffer(int width, int height)
+{
+    int offset_center = 16 + ((XBUF_WIDTH - width) / 2);
+    return (uint8_t *)SCREEN + offset_center;
 }
 
 int main() {
@@ -679,8 +667,6 @@ int main() {
         sleep_ms(1000);
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
-        start_time = time_us_64();
-
         while (!reboot) {
             pce_run();
 
@@ -701,17 +687,6 @@ int main() {
 
             psg_update((int16_t *) audio_buffer, AUDIO_BUFFER_LENGTH, 0xff);
             i2s_dma_write(&i2s_config, (const int16_t *) audio_buffer);
-            frame++;
-            if (limit_fps) {
-
-                frame_cnt++;
-                if (frame_cnt == 6) {
-                    while (time_us_64() - frame_timer_start < 16666 * 6);  // 60 Hz
-                    frame_timer_start = time_us_64();
-                    frame_cnt = 0;
-                }
-            }
-
 
             tight_loop_contents();
         }

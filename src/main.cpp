@@ -16,7 +16,7 @@ extern "C" {
 
 #include "nespad.h"
 #include "ff.h"
-//#include "ps2kbd_mrmltr.h"
+#include "ps2kbd_mrmltr.h"
 
 #define HOME_DIR "\\PCE"
 extern char __flash_binary_end;
@@ -88,6 +88,41 @@ void nespad_tick() {
     // if (gamepad1_bits.down) smsSystem|=INPUT_HARD_RESET;
     //supervision_set_input(controls_state);
 }
+
+static bool isInReport(hid_keyboard_report_t const* report, const unsigned char keycode) {
+    for (unsigned char i: report->keycode) {
+        if (i == keycode) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void
+__not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid_keyboard_report_t const* prev_report) {
+    /* printf("HID key report modifiers %2.2X report ", report->modifier);
+    for (unsigned char i: report->keycode)
+        printf("%2.2X", i);
+    printf("\r\n");
+     */
+    keyboard_bits.start = isInReport(report, HID_KEY_ENTER);
+    keyboard_bits.select = isInReport(report, HID_KEY_BACKSPACE) || isInReport(report, HID_KEY_ESCAPE);
+
+    keyboard_bits.a = isInReport(report, HID_KEY_Z) || isInReport(report, HID_KEY_O);
+    keyboard_bits.b = isInReport(report, HID_KEY_X) || isInReport(report, HID_KEY_P);
+
+    keyboard_bits.up = isInReport(report, HID_KEY_ARROW_UP) || isInReport(report, HID_KEY_W);
+    keyboard_bits.down = isInReport(report, HID_KEY_ARROW_DOWN) || isInReport(report, HID_KEY_S);
+    keyboard_bits.left = isInReport(report, HID_KEY_ARROW_LEFT) || isInReport(report, HID_KEY_A);
+    keyboard_bits.right = isInReport(report, HID_KEY_ARROW_RIGHT)  || isInReport(report, HID_KEY_D);
+    //-------------------------------------------------------------------------
+}
+
+Ps2Kbd_Mrmltr ps2kbd(
+        pio1,
+        0,
+        process_kbd_report);
+
 
 
 i2s_config_t i2s_config;
@@ -580,7 +615,7 @@ void __time_critical_func(render_core)() {
     i2s_volume(&i2s_config, 0);
     i2s_init(&i2s_config);
 
-//    ps2kbd.init_gpio();
+    ps2kbd.init_gpio();
     nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
     graphics_init();
@@ -605,7 +640,7 @@ void __time_critical_func(render_core)() {
 #ifdef TFT
             refresh_lcd();
 #endif
-//            ps2kbd.tick();
+            ps2kbd.tick();
             nespad_tick();
 
             last_frame_tick = tick;

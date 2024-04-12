@@ -99,7 +99,7 @@ typedef struct __attribute__((__packed__)) {
     char filename[79];
 } file_item_t;
 
-constexpr int max_files = 100;
+constexpr int max_files = 600;
 file_item_t *fileItems = (file_item_t *) (&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 
 int compareFileItems(const void *a, const void *b) {

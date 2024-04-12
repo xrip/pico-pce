@@ -14,9 +14,9 @@ void psram_memset(uint32_t addr32, uint32_t val, uint32_t size) {
     for (; addr32 % 4; ++addr32) {
         psram_write8(&psram_spi, addr32, val);
     }
-    val = (val << 24) | (val << 16) | (val << 8) | val;
+    uint32_t val32 = (val << 24) | (val << 16) | (val << 8) | val;
     for (; addr32 < eaddr; addr32 += 4) {
-        psram_write32(&psram_spi, addr32, val);
+        psram_write32(&psram_spi, addr32, val32);
     }
     addr32 -= 3;
     for (; addr32 < eaddr; ++addr32) {

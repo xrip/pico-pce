@@ -6,6 +6,8 @@
 #include "pce.h"
 #include "gfx.h"
 
+#include "psram_spi.h"
+
 #define PAL(nibble) (PAL[(L >> ((nibble) * 4)) & 15])
 
 #define V_FLIP  0x8000
@@ -84,14 +86,14 @@ draw_tiles(uint8_t *screen_buffer, int Y1, int Y2, int scroll_x, int scroll_y)
 				M = C[17];
 				L |= ((M & 0x88) >> 0) | ((M & 0x44) << 9) | ((M & 0x22) << 18) | ((M & 0x11) << 27);
 
-				if (J & 0x80) P[0] = PAL(1);
-				if (J & 0x40) P[1] = PAL(3);
-				if (J & 0x20) P[2] = PAL(5);
-				if (J & 0x10) P[3] = PAL(7);
-				if (J & 0x08) P[4] = PAL(0);
-				if (J & 0x04) P[5] = PAL(2);
-				if (J & 0x02) P[6] = PAL(4);
-				if (J & 0x01) P[7] = PAL(6);
+				if (J & 0x80) write8psram((uint32_t)P, PAL(1));
+				if (J & 0x40) write8psram((uint32_t)P+1, PAL(3));
+				if (J & 0x20) write8psram((uint32_t)P+2, PAL(5));
+				if (J & 0x10) write8psram((uint32_t)P+3, PAL(7));
+				if (J & 0x08) write8psram((uint32_t)P+4, PAL(0));
+				if (J & 0x04) write8psram((uint32_t)P+5, PAL(2));
+				if (J & 0x02) write8psram((uint32_t)P+6, PAL(4));
+				if (J & 0x01) write8psram((uint32_t)P+7, PAL(6));
 			}
 		}
 		line += h;
@@ -150,44 +152,44 @@ draw_sprite(uint8_t *P, const uint16_t *C, int height, uint32_t attr)
 
 		if (hflip) {
 			L = L2;
-			if ((J & 0x8000)) P[15] = PAL(1);
-			if ((J & 0x4000)) P[14] = PAL(3);
-			if ((J & 0x2000)) P[13] = PAL(5);
-			if ((J & 0x1000)) P[12] = PAL(7);
-			if ((J & 0x0800)) P[11] = PAL(0);
-			if ((J & 0x0400)) P[10] = PAL(2);
-			if ((J & 0x0200)) P[9]  = PAL(4);
-			if ((J & 0x0100)) P[8]  = PAL(6);
+			if ((J & 0x8000)) write8psram((uint32_t)P+15, PAL(1));
+			if ((J & 0x4000)) write8psram((uint32_t)P+14, PAL(3));
+			if ((J & 0x2000)) write8psram((uint32_t)P+13, PAL(5));
+			if ((J & 0x1000)) write8psram((uint32_t)P+12, PAL(7));
+			if ((J & 0x0800)) write8psram((uint32_t)P+11, PAL(0));
+			if ((J & 0x0400)) write8psram((uint32_t)P+10, PAL(2));
+			if ((J & 0x0200)) write8psram((uint32_t)P+9, PAL(4));
+			if ((J & 0x0100)) write8psram((uint32_t)P+8, PAL(6));
 
 			L = L1;
-			if ((J & 0x80)) P[7] = PAL(1);
-			if ((J & 0x40)) P[6] = PAL(3);
-			if ((J & 0x20)) P[5] = PAL(5);
-			if ((J & 0x10)) P[4] = PAL(7);
-			if ((J & 0x08)) P[3] = PAL(0);
-			if ((J & 0x04)) P[2] = PAL(2);
-			if ((J & 0x02)) P[1] = PAL(4);
-			if ((J & 0x01)) P[0] = PAL(6);
+			if ((J & 0x80)) write8psram((uint32_t)P+7, PAL(1));
+			if ((J & 0x40)) write8psram((uint32_t)P+6, PAL(3));
+			if ((J & 0x20)) write8psram((uint32_t)P+5, PAL(5));
+			if ((J & 0x10)) write8psram((uint32_t)P+4, PAL(7));
+			if ((J & 0x08)) write8psram((uint32_t)P+3, PAL(0));
+			if ((J & 0x04)) write8psram((uint32_t)P+2, PAL(2));
+			if ((J & 0x02)) write8psram((uint32_t)P+1, PAL(4));
+			if ((J & 0x01)) write8psram((uint32_t)P+0, PAL(6));
 		} else {
 			L = L2;
-			if ((J & 0x8000)) P[0] = PAL(1);
-			if ((J & 0x4000)) P[1] = PAL(3);
-			if ((J & 0x2000)) P[2] = PAL(5);
-			if ((J & 0x1000)) P[3] = PAL(7);
-			if ((J & 0x0800)) P[4] = PAL(0);
-			if ((J & 0x0400)) P[5] = PAL(2);
-			if ((J & 0x0200)) P[6] = PAL(4);
-			if ((J & 0x0100)) P[7] = PAL(6);
+			if ((J & 0x8000)) write8psram((uint32_t)P+0, PAL(1));
+			if ((J & 0x4000)) write8psram((uint32_t)P+1, PAL(3));
+			if ((J & 0x2000)) write8psram((uint32_t)P+2, PAL(5));
+			if ((J & 0x1000)) write8psram((uint32_t)P+3, PAL(7));
+			if ((J & 0x0800)) write8psram((uint32_t)P+4, PAL(0));
+			if ((J & 0x0400)) write8psram((uint32_t)P+5, PAL(2));
+			if ((J & 0x0200)) write8psram((uint32_t)P+6, PAL(4));
+			if ((J & 0x0100)) write8psram((uint32_t)P+7, PAL(6));
 
 			L = L1;
-			if ((J & 0x80)) P[8]  = PAL(1);
-			if ((J & 0x40)) P[9]  = PAL(3);
-			if ((J & 0x20)) P[10] = PAL(5);
-			if ((J & 0x10)) P[11] = PAL(7);
-			if ((J & 0x08)) P[12] = PAL(0);
-			if ((J & 0x04)) P[13] = PAL(2);
-			if ((J & 0x02)) P[14] = PAL(4);
-			if ((J & 0x01)) P[15] = PAL(6);
+			if ((J & 0x80)) write8psram((uint32_t)P+8, PAL(1));
+			if ((J & 0x40)) write8psram((uint32_t)P+9, PAL(3));
+			if ((J & 0x20)) write8psram((uint32_t)P+10, PAL(5));
+			if ((J & 0x10)) write8psram((uint32_t)P+11, PAL(7));
+			if ((J & 0x08)) write8psram((uint32_t)P+12, PAL(0));
+			if ((J & 0x04)) write8psram((uint32_t)P+13, PAL(2));
+			if ((J & 0x02)) write8psram((uint32_t)P+14, PAL(4));
+			if ((J & 0x01)) write8psram((uint32_t)P+15, PAL(6));
 		}
 	}
 }
@@ -305,8 +307,6 @@ gfx_latch_context(int force)
 	}
 }
 
-
-extern uint8_t SCREEN[];
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
 */
@@ -327,7 +327,7 @@ render_lines(int min_line, int max_line)
 	// We must fill the region with color 0 first.
 	size_t screen_width = IO_VDC_SCREEN_WIDTH;
 	for (int y = min_line; y <= max_line; y++) {
-		memset(screen_buffer + (y * XBUF_WIDTH), PCE.Palette[0], screen_width);
+		psram_memset((uint32_t)screen_buffer + (y * XBUF_WIDTH), PCE.Palette[0], screen_width);
 	}
 
 	// Sprites with priority 0 are drawn behind the tiles
@@ -343,6 +343,11 @@ render_lines(int min_line, int max_line)
 	// Draw regular sprites
 	if (gfx_context.control & 0x40) {
 		draw_sprites(screen_buffer, min_line, max_line, 1);
+	}
+
+	// move picture from temporary buffer (PSRAM) to real RAM
+	for (int y = min_line; y <= max_line; y++) {
+		psram_memcpy(screen_buffer + (y * XBUF_WIDTH), screen_width);
 	}
 }
 

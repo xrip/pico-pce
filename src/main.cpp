@@ -17,6 +17,7 @@ extern "C" {
 #include "nespad.h"
 #include "ff.h"
 #include "ps2kbd_mrmltr.h"
+#include "psram_spi.h"
 
 #define HOME_DIR "\\PCE"
 extern char __flash_binary_end;
@@ -691,6 +692,8 @@ int main() {
         sleep_ms(33);
         gpio_put(PICO_DEFAULT_LED_PIN, false);
     }
+
+    init_psram();
 
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);

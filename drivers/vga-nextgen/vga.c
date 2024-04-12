@@ -212,7 +212,7 @@ void __time_critical_func() dma_handler_VGA() {
     // uint8_t* vbuf8=vbuf+(line*g_buf_width/2); //4bit buf
     //uint8_t* vbuf8=vbuf+(line*g_buf_width/4); //2bit buf
     //uint8_t* vbuf8=vbuf+((line&1)*8192+(line>>1)*g_buf_width/4);
-    uint8_t* input_buffer_8bit = input_buffer + y / 2 * 80 + (y & 1) * 8192;
+    uint8_t* input_buffer_8bit;// = input_buffer + y / 2 * 80 + (y & 1) * 8192;
 
 
     //output_buffer = &lines_pattern[2 + ((line_number) & 1)];

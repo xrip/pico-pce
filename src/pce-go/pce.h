@@ -291,9 +291,9 @@ uint8_t pce_readIO(uint16_t A);
 	else page[a] = b;								\
 }
 
-#define pce_read16(addr) ({							\
-	uint16_t a = (addr); 							\
-	*((uint16_t*)(PageR[a >> 13] + a));				\
+#define pce_read16(addr) ({ \
+    uint8_t *page = PageR[addr >> 13];  \
+    page[addr] | (page[addr+1] << 8);   \
 })
 
 #define pce_write16(addr, word) {					\

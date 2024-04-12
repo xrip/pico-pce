@@ -98,13 +98,13 @@ static bool running = false;
 /**
  * Load card into memory and set its memory map
  */
-int LoadCard(char *ROM, size_t fsize)
+int LoadCard(const char *ROM, size_t fsize)
 {
-    int offset;
+	int offset;
 #if 0
 
 
-    MESSAGE_INFO("Opening %s...\n", name);
+	MESSAGE_INFO("Opening %s...\n", name);
 
 	FILE *fp = fopen(name, "rb");
 
@@ -122,110 +122,110 @@ int LoadCard(char *ROM, size_t fsize)
 	fseek(fp, 0, SEEK_END);
 	fsize = ftell(fp);
 #endif
-    offset = fsize & 0x1fff;
+	offset = fsize & 0x1fff;
 
-    // read ROM
-    PCE.ROM = ROM;
+	// read ROM
+	PCE.ROM = ROM;
 
-    if (PCE.ROM == NULL)
-    {
-        MESSAGE_ERROR("Failed to allocate ROM buffer!\n");
-        return -1;
-    }
+	if (PCE.ROM == NULL)
+	{
+		MESSAGE_ERROR("Failed to allocate ROM buffer!\n");
+		return -1;
+	}
 /*
 	fseek(fp, 0, SEEK_SET);
 	fread(PCE.ROM, 1, fsize, fp);
 
 	fclose(fp);
 */
-    PCE.ROM_SIZE = (fsize - offset) / 0x2000;
-    PCE.ROM_DATA = ROM + offset;
-    PCE.ROM_CRC = crc32_le(0, PCE.ROM, fsize);
+	PCE.ROM_SIZE = (fsize - offset) / 0x2000;
+	PCE.ROM_DATA = PCE.ROM + offset;
+	PCE.ROM_CRC = crc32_le(0, PCE.ROM, fsize);
 
-    uint32_t IDX = 0;
-    uint32_t ROM_MASK = 1;
+	uint32_t IDX = 0;
+	uint32_t ROM_MASK = 1;
 
-    while (ROM_MASK < PCE.ROM_SIZE) ROM_MASK <<= 1;
-    ROM_MASK--;
+	while (ROM_MASK < PCE.ROM_SIZE) ROM_MASK <<= 1;
+	ROM_MASK--;
 
-    MESSAGE_INFO("ROM LOADED: OFFSET=%d, BANKS=%d, MASK=%03X, CRC=%08X\n",
-                 offset, PCE.ROM_SIZE, ROM_MASK, PCE.ROM_CRC);
+	MESSAGE_INFO("ROM LOADED: OFFSET=%d, BANKS=%d, MASK=%03X, CRC=%08X\n",
+		offset, PCE.ROM_SIZE, ROM_MASK, PCE.ROM_CRC);
 
-    while (romFlags[IDX].CRC) {
-        if (PCE.ROM_CRC == romFlags[IDX].CRC)
-            break;
-        IDX++;
-    }
+	while (romFlags[IDX].CRC) {
+		if (PCE.ROM_CRC == romFlags[IDX].CRC)
+			break;
+		IDX++;
+	}
 
-    MESSAGE_INFO("Game Name: %s\n", romFlags[IDX].Name);
+	MESSAGE_INFO("Game Name: %s\n", romFlags[IDX].Name);
 
-    // US Encrypted
-    if ((romFlags[IDX].Flags & US_ENCODED) || PCE.ROM_DATA[0x1FFF] < 0xE0)
-    {
-        MESSAGE_INFO("This rom is probably US encrypted, decrypting...\n");
+	// US Encrypted
+	if ((romFlags[IDX].Flags & US_ENCODED) || PCE.ROM_DATA[0x1FFF] < 0xE0)
+	{
+		MESSAGE_INFO("This rom is probably US encrypted, decrypting...\n");
 
-        unsigned char inverted_nibble[16] = {
-                0, 8, 4, 12, 2, 10, 6, 14,
-                1, 9, 5, 13, 3, 11, 7, 15
-        };
+		unsigned char inverted_nibble[16] = {
+			0, 8, 4, 12, 2, 10, 6, 14,
+			1, 9, 5, 13, 3, 11, 7, 15
+		};
 
-        for (int x = 0; x < PCE.ROM_SIZE * 0x2000; x++) {
-            unsigned char temp = PCE.ROM_DATA[x] & 15;
+		for (int x = 0; x < PCE.ROM_SIZE * 0x2000; x++) {
+			unsigned char temp = PCE.ROM_DATA[x] & 15;
 
-            PCE.ROM_DATA[x] &= ~0x0F;
-            PCE.ROM_DATA[x] |= inverted_nibble[PCE.ROM_DATA[x] >> 4];
+			PCE.ROM_DATA[x] &= ~0x0F;
+			PCE.ROM_DATA[x] |= inverted_nibble[PCE.ROM_DATA[x] >> 4];
 
-            PCE.ROM_DATA[x] &= ~0xF0;
-            PCE.ROM_DATA[x] |= inverted_nibble[temp] << 4;
-        }
-    }
+			PCE.ROM_DATA[x] &= ~0xF0;
+			PCE.ROM_DATA[x] |= inverted_nibble[temp] << 4;
+		}
+	}
 
-    // For example with Devil Crush 512Ko
-    if (romFlags[IDX].Flags & TWO_PART_ROM)
-        PCE.ROM_SIZE = 0x30;
+	// For example with Devil Crush 512Ko
+	if (romFlags[IDX].Flags & TWO_PART_ROM)
+		PCE.ROM_SIZE = 0x30;
 
-    // Game ROM
-    for (int i = 0; i < 0x80; i++) {
-        if (PCE.ROM_SIZE == 0x30) {
-            switch (i & 0x70) {
-                case 0x00:
-                case 0x10:
-                case 0x50:
-                    PCE.MemoryMapR[i] = PCE.ROM_DATA + (i & ROM_MASK) * 0x2000;
-                    break;
-                case 0x20:
-                case 0x60:
-                    PCE.MemoryMapR[i] = PCE.ROM_DATA + ((i - 0x20) & ROM_MASK) * 0x2000;
-                    break;
-                case 0x30:
-                case 0x70:
-                    PCE.MemoryMapR[i] = PCE.ROM_DATA + ((i - 0x10) & ROM_MASK) * 0x2000;
-                    break;
-                case 0x40:
-                    PCE.MemoryMapR[i] = PCE.ROM_DATA + ((i - 0x20) & ROM_MASK) * 0x2000;
-                    break;
-            }
-        } else {
-            PCE.MemoryMapR[i] = PCE.ROM_DATA + (i & ROM_MASK) * 0x2000;
-        }
-        PCE.MemoryMapW[i] = PCE.NULLRAM;
-    }
+	// Game ROM
+	for (int i = 0; i < 0x80; i++) {
+		if (PCE.ROM_SIZE == 0x30) {
+			switch (i & 0x70) {
+			case 0x00:
+			case 0x10:
+			case 0x50:
+				PCE.MemoryMapR[i] = PCE.ROM_DATA + (i & ROM_MASK) * 0x2000;
+				break;
+			case 0x20:
+			case 0x60:
+				PCE.MemoryMapR[i] = PCE.ROM_DATA + ((i - 0x20) & ROM_MASK) * 0x2000;
+				break;
+			case 0x30:
+			case 0x70:
+				PCE.MemoryMapR[i] = PCE.ROM_DATA + ((i - 0x10) & ROM_MASK) * 0x2000;
+				break;
+			case 0x40:
+				PCE.MemoryMapR[i] = PCE.ROM_DATA + ((i - 0x20) & ROM_MASK) * 0x2000;
+				break;
+			}
+		} else {
+			PCE.MemoryMapR[i] = PCE.ROM_DATA + (i & ROM_MASK) * 0x2000;
+		}
+		PCE.MemoryMapW[i] = PCE.NULLRAM;
+	}
 
-    // Allocate the card's onboard ram
-    if (romFlags[IDX].Flags & ONBOARD_RAM) {
-        // if (!PCE.ExRAM)
-        // PCE.ExRAM = malloc(0x8000);
-        PCE.MemoryMapR[0x40] = PCE.MemoryMapW[0x40] = PCE.ExRAM;
-        PCE.MemoryMapR[0x41] = PCE.MemoryMapW[0x41] = PCE.ExRAM + 0x2000;
-        PCE.MemoryMapR[0x42] = PCE.MemoryMapW[0x42] = PCE.ExRAM + 0x4000;
-        PCE.MemoryMapR[0x43] = PCE.MemoryMapW[0x43] = PCE.ExRAM + 0x6000;
-    }
+	// Allocate the card's onboard ram
+	if (romFlags[IDX].Flags & ONBOARD_RAM) {
+		// if (!PCE.ExRAM)
+			// PCE.ExRAM = malloc(0x8000);
+		PCE.MemoryMapR[0x40] = PCE.MemoryMapW[0x40] = PCE.ExRAM;
+		PCE.MemoryMapR[0x41] = PCE.MemoryMapW[0x41] = PCE.ExRAM + 0x2000;
+		PCE.MemoryMapR[0x42] = PCE.MemoryMapW[0x42] = PCE.ExRAM + 0x4000;
+		PCE.MemoryMapR[0x43] = PCE.MemoryMapW[0x43] = PCE.ExRAM + 0x6000;
+	}
 
-    // Mapper for roms >= 1.5MB (SF2, homebrews)
-    if (PCE.ROM_SIZE >= 192)
-        PCE.MemoryMapW[0x00] = PCE.IOAREA;
+	// Mapper for roms >= 1.5MB (SF2, homebrews)
+	if (PCE.ROM_SIZE >= 192)
+		PCE.MemoryMapW[0x00] = PCE.IOAREA;
 
-    return 0;
+	return 0;
 }
 
 

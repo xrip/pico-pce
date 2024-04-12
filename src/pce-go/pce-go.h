@@ -77,7 +77,8 @@ void ResetPCE(bool);
 void RunPCE(void);
 void ShutdownPCE();
 int InitPCE(int samplerate, bool stereo, const void *ROM, size_t fsize);
-int LoadCard(char *ROM, size_t fsize);
+// int LoadCard(const char *name);
+int LoadCard(const char *ROM, size_t size);
 void *PalettePCE(int bitdepth);
 
 extern uint8_t *osd_gfx_framebuffer(int width, int height);

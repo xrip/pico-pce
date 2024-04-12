@@ -122,16 +122,16 @@ typedef struct {
 
 typedef struct {
 	// Main memory
-	uint8_t *RAM; // [0x2000]
+	uint8_t RAM[0x2000];
 
 	// Video RAM
-	uint16_t *VRAM; // [0x8000]
+	uint16_t VRAM[0x8000];
 
 	// Sprite RAM
 	sprite_t SPRAM[64];
 
 	// Extra RAM contained on the HuCard (Populous)
-	uint8_t *ExRAM;
+	uint8_t ExRAM[0x8000];
 
 	// ROM memory
 	uint8_t *ROM, *ROM_DATA;
@@ -144,7 +144,7 @@ typedef struct {
 
 	// For performance reasons we trap read/writes to unmapped areas:
 	uint8_t *IOAREA;
-	uint8_t *NULLRAM;
+	uint8_t NULLRAM[0x2000];
 
 	// PCE->PC Palette convetion array
 	// Each of the 512 available PCE colors (333 RGB -> 512 colors)
@@ -167,8 +167,8 @@ typedef struct {
 	uint8_t MMR[8];
 
 	// Effective memory map
-	uint8_t **MemoryMapR; // [256];
-	uint8_t **MemoryMapW; // [256];
+	uint8_t *MemoryMapR[256];
+	uint8_t *MemoryMapW[256];
 
 	// Street Fighter 2 Mapper
 	uint8_t SF2;
@@ -344,7 +344,7 @@ pce_write16(uint16_t addr, uint16_t word)
 static inline void
 pce_bank_set(uint8_t P, uint8_t V)
 {
-	TRACE_IO("Bank switching (MMR[%d] = %d)\n", P, V);
+	//TRACE_IO("Bank switching (MMR[%d] = %d)\n", P, V);
 
 	PCE.MMR[P] = V;
 	PageR[P] = (PCE.MemoryMapR[V] == PCE.IOAREA) ? (PCE.IOAREA) : (PCE.MemoryMapR[V] - P * 0x2000);

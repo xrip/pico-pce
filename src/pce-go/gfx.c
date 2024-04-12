@@ -1,3 +1,4 @@
+#pragma GCC optimize("Ofast")
 // gfx.c - VDC/VCE Emulation
 //
 #include <stdlib.h>

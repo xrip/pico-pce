@@ -1,3 +1,4 @@
+#pragma GCC optimize("Ofast")
 // pce.c - Machine emulation (Memory/IO/Timer)
 //
 #include <stdlib.h>
@@ -67,12 +68,15 @@ pce_reset(bool hard)
 int
 pce_init(void)
 {
-	PCE.RAM = malloc(0x2000);
-	PCE.VRAM = malloc(0x10000);
-	PCE.NULLRAM = malloc(0x2000);
+	// memset(PCE.RAM, 0x00, sizeof PCE.RAM);
+	// memset(PCE.VRAM, 0x00, sizeof PCE.VRAM );
+	// memset(PCE.NULLRAM, 0x00, sizeof PCE.NULLRAM);
+	// PCE.RAM = malloc(0x2000);
+	// PCE.VRAM = malloc(0x10000);
+	// PCE.NULLRAM = malloc(0x2000);
 	PCE.IOAREA = PCE.NULLRAM + 4;
-	PCE.MemoryMapR = calloc(256, sizeof(uint8_t *));
-	PCE.MemoryMapW = calloc(256, sizeof(uint8_t *));
+	// PCE.MemoryMapR = calloc(256, sizeof(uint8_t *));
+	// PCE.MemoryMapW = calloc(256, sizeof(uint8_t *));
 
 	if (!PCE.RAM || !PCE.VRAM || !PCE.NULLRAM || !PCE.MemoryMapR || !PCE.MemoryMapW) {
 		pce_term();
@@ -101,20 +105,20 @@ pce_init(void)
 void
 pce_term(void)
 {
-	free(PCE.RAM);
-	PCE.RAM = NULL;
-	free(PCE.VRAM);
-	PCE.VRAM = NULL;
-	free(PCE.ExRAM);
-	PCE.ExRAM = NULL;
-	free(PCE.ROM);
-	PCE.ROM = NULL;
-	free(PCE.NULLRAM);
-	PCE.NULLRAM = NULL;
-	free(PCE.MemoryMapR);
-	PCE.MemoryMapR = NULL;
-	free(PCE.MemoryMapW);
-	PCE.MemoryMapW = NULL;
+	// free(PCE.RAM);
+	// PCE.RAM = NULL;
+	// free(PCE.VRAM);
+	// PCE.VRAM = NULL;
+	// free(PCE.ExRAM);
+	// PCE.ExRAM = NULL;
+	// free(PCE.ROM);
+	// PCE.ROM = NULL;
+	// free(PCE.NULLRAM);
+	// PCE.NULLRAM = NULL;
+	// free(PCE.MemoryMapR);
+	// PCE.MemoryMapR = NULL;
+	// free(PCE.MemoryMapW);
+	// PCE.MemoryMapW = NULL;
 }
 
 

@@ -1,4 +1,4 @@
-#pragma
+#pragma GCC optimize("Ofast")
 //  h6280.c - CPU Emulation
 //
 #include <stdio.h>
@@ -69,6 +69,7 @@ h6280_run(int max_cycles)
 	while (Cycles < max_cycles)
 	{
 		UBYTE opcode = imm_operand(CPU.PC);
+
 
 		TRACE_CPU("0x%4X: %s\n", CPU.PC, opcodes[opcode].name);
 

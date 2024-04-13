@@ -28,8 +28,8 @@ static uint8_t *framebuffer_top, *framebuffer_bottom;
 /*
 	Draw background tiles between two lines
 */
-static void
-draw_tiles(uint8_t *screen_buffer, int Y1, int Y2, int scroll_x, int scroll_y)
+static void __always_inline
+draw_tiles(int Y1, int Y2, int scroll_x, int scroll_y)
 {
 	TRACE_GFX("Rendering tiles on lines %3d - %3d\tScroll: (%3d,%3d)\n", Y1, Y2, scroll_x, scroll_y);
 
@@ -47,7 +47,7 @@ draw_tiles(uint8_t *screen_buffer, int Y1, int Y2, int scroll_x, int scroll_y)
 
 	y >>= 3;
 
-	uint8_t *PP = (screen_buffer + XBUF_WIDTH * Y1) - (scroll_x & 7);
+	uint8_t *PP = (SCREEN + XBUF_WIDTH * Y1) - (scroll_x & 7);
 
 	for (int line = Y1; line < Y2; y++) {
 		x = scroll_x / 8;
@@ -198,8 +198,8 @@ draw_sprite(uint8_t *P, const uint16_t *C, int height, uint32_t attr)
 /*
 	Draw sprites between two lines
 */
-static void // Do not inline
-draw_sprites(uint8_t *screen_buffer, int Y1, int Y2, int priority)
+static void __always_inline // Do not inline
+draw_sprites(int Y1, int Y2, int priority)
 {
 	TRACE_GFX("Rendering sprites on lines %3d - %3d\tPriority: %d\n", Y1, Y2, priority);
 
@@ -238,7 +238,7 @@ draw_sprites(uint8_t *screen_buffer, int Y1, int Y2, int priority)
 
 		cgy *= 16;
 
-		uint8_t *P = screen_buffer + ((attr & V_FLIP ? cgy + y : y) * XBUF_WIDTH) + x;
+		uint8_t *P = SCREEN + ((attr & V_FLIP ? cgy + y : y) * XBUF_WIDTH) + x;
 		uint16_t *C = PCE.VRAM + (no * 64);
 
 		for (int yy = 0; yy <= cgy; yy += 16) {
@@ -307,39 +307,51 @@ gfx_latch_context(int force)
 	}
 }
 
-
+#define LOCKED_LINES_MAX 10
+uint8_t LOCKED_LINE[XBUF_WIDTH * (LOCKED_LINES_MAX + 1)] = { 0 };
+volatile int locked_line_start = 1000;
+volatile int locked_line_end = -1;
 
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
 */
-static inline void
-render_lines(int min_line, int max_line)
-{
+static __always_inline void
+render_line(int ln, int sz) {
 	gfx_context.latched = 0;
 
+	// we will show this line for the time line is rendering
+	uint8_t * buf = SCREEN + (ln * XBUF_WIDTH);
+	memcpy(LOCKED_LINE, buf, XBUF_WIDTH * (sz + 1));
+	locked_line_start = ln;
+	locked_line_end = ln + sz;
+
     // We must fill the region with color 0 first.
-//    size_t screen_width = IO_VDC_SCREEN_WIDTH;
-    for (int y = min_line; y <= max_line; y++) {
-        memset(SCREEN + (y * XBUF_WIDTH), PCE.Palette[0], 256);
-    }
-//    memset(SCREEN + (min_line * XBUF_WIDTH), PCE.Palette[0], XBUF_WIDTH*(max_line-min_line));
+    memset(buf, PCE.Palette[0], XBUF_WIDTH * sz);
 
 	// Sprites with priority 0 are drawn behind the tiles
 	if (gfx_context.control & 0x40) {
-		draw_sprites(SCREEN, min_line, max_line, 0);
+		draw_sprites(ln, ln + sz, 0);
 	}
 
 	// Draw the background tiles
 	if (gfx_context.control & 0x80) {
-		draw_tiles(SCREEN, min_line, max_line, gfx_context.scroll_x, gfx_context.scroll_y);
+		draw_tiles(ln, ln + sz, gfx_context.scroll_x, gfx_context.scroll_y);
 	}
 
 	// Draw regular sprites
 	if (gfx_context.control & 0x40) {
-		draw_sprites(SCREEN, min_line, max_line, 1);
+		draw_sprites(ln, ln + sz, 1);
 	}
+	locked_line_start = 1000;
+	locked_line_end = -1;
 }
 
+static __always_inline void
+render_lines(int min_line, int max_line) {
+	for(int ln = min_line; ln < max_line; ln += LOCKED_LINES_MAX) {
+		render_line(ln, max_line - ln > LOCKED_LINES_MAX ? LOCKED_LINES_MAX : max_line - ln);
+	}
+}
 
 int
 gfx_init(void)

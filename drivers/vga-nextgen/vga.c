@@ -70,7 +70,7 @@ static uint16_t* txt_palette_fast = NULL;
 enum graphics_mode_t graphics_mode;
 
 extern uint8_t LOCKED_LINE[256];
-extern uint8_t* locked_line_start;
+extern volatile int locked_line_start, locked_line_end;
 
 void __time_critical_func() dma_handler_VGA() {
     dma_hw->ints0 = 1u << dma_chan_ctrl;
@@ -311,7 +311,7 @@ void __time_critical_func() dma_handler_VGA() {
         // Это только для sega
         case GRAPHICSMODE_DEFAULT:
             input_buffer_8bit = (input_buffer + y * (352+16));
-            if (input_buffer_8bit == locked_line_start) {
+            if (y >= locked_line_start && y < locked_line_end) {
                 input_buffer_8bit = &LOCKED_LINE[0];
             }
             for (int i = width; i--;) {

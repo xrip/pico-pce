@@ -1,4 +1,5 @@
 #pragma GCC optimize("Ofast")
+#include "pico/platform.h"
 // gfx.c - VDC/VCE Emulation
 //
 #include <stdlib.h>
@@ -21,13 +22,14 @@ static struct {
 	int latched;
 } gfx_context;
 
+extern uint8_t SCREEN[];
 static uint8_t *framebuffer_top, *framebuffer_bottom;
 
 /*
 	Draw background tiles between two lines
 */
-static void
-draw_tiles(uint8_t *screen_buffer, int Y1, int Y2, int scroll_x, int scroll_y)
+static void __always_inline
+draw_tiles(int Y1, int Y2, int scroll_x, int scroll_y)
 {
 	TRACE_GFX("Rendering tiles on lines %3d - %3d\tScroll: (%3d,%3d)\n", Y1, Y2, scroll_x, scroll_y);
 
@@ -45,7 +47,7 @@ draw_tiles(uint8_t *screen_buffer, int Y1, int Y2, int scroll_x, int scroll_y)
 
 	y >>= 3;
 
-	uint8_t *PP = (screen_buffer + XBUF_WIDTH * Y1) - (scroll_x & 7);
+	uint8_t *PP = (SCREEN + XBUF_WIDTH * Y1) - (scroll_x & 7);
 
 	for (int line = Y1; line < Y2; y++) {
 		x = scroll_x / 8;
@@ -196,8 +198,8 @@ draw_sprite(uint8_t *P, const uint16_t *C, int height, uint32_t attr)
 /*
 	Draw sprites between two lines
 */
-static void // Do not inline
-draw_sprites(uint8_t *screen_buffer, int Y1, int Y2, int priority)
+static void __always_inline // Do not inline
+draw_sprites(int Y1, int Y2, int priority)
 {
 	TRACE_GFX("Rendering sprites on lines %3d - %3d\tPriority: %d\n", Y1, Y2, priority);
 
@@ -236,7 +238,7 @@ draw_sprites(uint8_t *screen_buffer, int Y1, int Y2, int priority)
 
 		cgy *= 16;
 
-		uint8_t *P = screen_buffer + ((attr & V_FLIP ? cgy + y : y) * XBUF_WIDTH) + x;
+		uint8_t *P = SCREEN + ((attr & V_FLIP ? cgy + y : y) * XBUF_WIDTH) + x;
 		uint16_t *C = PCE.VRAM + (no * 64);
 
 		for (int yy = 0; yy <= cgy; yy += 16) {
@@ -305,64 +307,48 @@ gfx_latch_context(int force)
 	}
 }
 
-static uint8_t TMP[XBUF_WIDTH << 1]; // TODO: detect best fit
 
-uint8_t *osd_gfx_tmp_framebuffer(int width) {
-    int offset_center = 16 + ((XBUF_WIDTH - width) / 2);
-    return (uint8_t *)TMP + offset_center;
-}
 
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
 */
-static inline void
-render_line(uint8_t *screen_buffer, int line) {
-
+static __always_inline void
+render_lines(int min_line, int max_line)
+{
 	gfx_context.latched = 0;
 
-	// Assume 16 columns of scratch area around our buffer.
-	framebuffer_top = screen_buffer - 16;
-	framebuffer_bottom = screen_buffer + PCE.VDC.screen_height * XBUF_WIDTH;
 
-	// We must fill the region with color 0 first.
-	size_t screen_width = IO_VDC_SCREEN_WIDTH;
-	//uint8_t *tmp = osd_gfx_tmp_framebuffer(PCE.VDC.screen_width);
-	memset(screen_buffer + (line * XBUF_WIDTH), PCE.Palette[0], screen_width);
+    // We must fill the region with color 0 first.
+//    size_t screen_width = IO_VDC_SCREEN_WIDTH;
+    for (int y = min_line; y <= max_line; y++) {
+        memset(SCREEN + (y * XBUF_WIDTH), PCE.Palette[0], 256);
+    }
+//    memset(SCREEN + (min_line * XBUF_WIDTH), PCE.Palette[0], XBUF_WIDTH*(max_line-min_line));
 
 	// Sprites with priority 0 are drawn behind the tiles
 	if (gfx_context.control & 0x40) {
-		draw_sprites(screen_buffer, line, line + 1, 0);
+		draw_sprites(min_line, max_line, 0);
 	}
 
 	// Draw the background tiles
 	if (gfx_context.control & 0x80) {
-		draw_tiles(screen_buffer, line, line + 1, gfx_context.scroll_x, gfx_context.scroll_y);
+		draw_tiles(min_line, max_line, gfx_context.scroll_x, gfx_context.scroll_y);
 	}
 
 	// Draw regular sprites
 	if (gfx_context.control & 0x40) {
-		draw_sprites(screen_buffer, line, line + 1, 1);
-	}
-
-	//memcpy(screen_buffer + (line * XBUF_WIDTH), tmp + XBUF_WIDTH, screen_width);
-}
-
-static inline void
-render_lines(int min_line, int max_line) {
-	uint8_t *screen_buffer = osd_gfx_framebuffer(PCE.VDC.screen_width, PCE.VDC.screen_height);
-	if (!screen_buffer) {
-		return;
-	}
-	uint32_t off = 0;
-	for (int ln = min_line; ln < max_line; ++ln) {
-		render_line(screen_buffer, ln);
+		draw_sprites(min_line, max_line, 1);
 	}
 }
+
 
 int
 gfx_init(void)
 {
 	gfx_reset(true);
+    // Assume 16 columns of scratch area around our buffer.
+    framebuffer_top = SCREEN - 16;
+    framebuffer_bottom = SCREEN + (256) * XBUF_WIDTH;
 	return 0;
 }
 
@@ -412,8 +398,7 @@ gfx_irq(int type)
 /*
 	Process one scanline
 */
-void
-gfx_run(void)
+void __time_critical_func(gfx_run)(void)
 {
 	int scanline = PCE.Scanline;
 

@@ -34,7 +34,7 @@ static FATFS fs;
 bool reboot = false;
 semaphore vga_start_semaphore;
 
-alignas(4) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
+alignas(4096) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
 alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
 
 struct input_bits_t {
@@ -726,8 +726,8 @@ int main() {
             frame++;
             if (1) {
 
-                if (++frame_cnt == 5) {
-                    while (time_us_64() - frame_timer_start < 20000 * 5);  // 60 Hz
+                if (++frame_cnt == 6) {
+                    while (time_us_64() - frame_timer_start < 16666 * 6);  // 60 Hz
                     frame_timer_start = time_us_64();
                     frame_cnt = 0;
                 }

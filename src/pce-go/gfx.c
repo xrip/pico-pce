@@ -307,9 +307,10 @@ gfx_latch_context(int force)
 	}
 }
 
-
-uint8_t LOCKED_LINE[XBUF_WIDTH * 2] = {0};
-volatile int locked_line_start, locked_line_end = -1;
+#define LOCKED_LINES_MAX 10
+uint8_t LOCKED_LINE[XBUF_WIDTH * (LOCKED_LINES_MAX + 1)] = { 0 };
+volatile int locked_line_start = 1000;
+volatile int locked_line_end = -1;
 
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
@@ -320,12 +321,12 @@ render_line(int ln, int sz) {
 
 	// we will show this line for the time line is rendering
 	uint8_t * buf = SCREEN + (ln * XBUF_WIDTH);
-	memcpy(LOCKED_LINE, buf, XBUF_WIDTH);
+	memcpy(LOCKED_LINE, buf, XBUF_WIDTH * (sz + 1));
 	locked_line_start = ln;
 	locked_line_end = ln + sz;
 
     // We must fill the region with color 0 first.
-    memset(buf, PCE.Palette[0], XBUF_WIDTH);
+    memset(buf, PCE.Palette[0], XBUF_WIDTH * sz);
 
 	// Sprites with priority 0 are drawn behind the tiles
 	if (gfx_context.control & 0x40) {
@@ -341,13 +342,14 @@ render_line(int ln, int sz) {
 	if (gfx_context.control & 0x40) {
 		draw_sprites(ln, ln + sz, 1);
 	}
-	locked_line_start = locked_line_end = -1;
+	locked_line_start = 1000;
+	locked_line_end = -1;
 }
 
 static __always_inline void
 render_lines(int min_line, int max_line) {
-	for(int ln = min_line; ln < max_line; ++ln) {
-		render_line(ln, 1);
+	for(int ln = min_line; ln < max_line; ln += LOCKED_LINES_MAX) {
+		render_line(ln, max_line - ln > LOCKED_LINES_MAX ? LOCKED_LINES_MAX : max_line - ln);
 	}
 }
 

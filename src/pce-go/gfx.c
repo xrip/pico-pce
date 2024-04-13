@@ -307,40 +307,39 @@ gfx_latch_context(int force)
 	}
 }
 
-
-
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
 */
 static __always_inline void
-render_lines(int min_line, int max_line)
-{
+render_line(int ln) {
 	gfx_context.latched = 0;
 
-
     // We must fill the region with color 0 first.
-//    size_t screen_width = IO_VDC_SCREEN_WIDTH;
-    for (int y = min_line; y <= max_line; y++) {
-        memset(SCREEN + (y * XBUF_WIDTH), PCE.Palette[0], 256);
-    }
-//    memset(SCREEN + (min_line * XBUF_WIDTH), PCE.Palette[0], XBUF_WIDTH*(max_line-min_line));
+    memset(SCREEN + (ln * XBUF_WIDTH), PCE.Palette[0], 256);
 
 	// Sprites with priority 0 are drawn behind the tiles
 	if (gfx_context.control & 0x40) {
-		draw_sprites(min_line, max_line, 0);
+		draw_sprites(ln, ln + 1, 0);
 	}
 
 	// Draw the background tiles
 	if (gfx_context.control & 0x80) {
-		draw_tiles(min_line, max_line, gfx_context.scroll_x, gfx_context.scroll_y);
+		draw_tiles(ln, ln + 1, gfx_context.scroll_x, gfx_context.scroll_y);
 	}
 
 	// Draw regular sprites
 	if (gfx_context.control & 0x40) {
-		draw_sprites(min_line, max_line, 1);
+		draw_sprites(ln, ln + 1, 1);
 	}
 }
 
+
+static __always_inline void
+render_lines(int min_line, int max_line) {
+	for(int ln = min_line; ln < max_line; ++ln) {
+		render_line(ln);
+	}
+}
 
 int
 gfx_init(void)

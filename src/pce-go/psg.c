@@ -1,5 +1,7 @@
 // psg.c - Programmable Sound Generator
 //
+#pragma GCC optimize("Ofast")
+#include "pico/platform.h"
 #include <stdlib.h>
 #include <string.h>
 #include "pce.h"
@@ -192,7 +194,7 @@ psg_term(void)
 
 
 void
-psg_update(int16_t *output, size_t length, uint32_t channels)
+__time_critical_func(psg_update)(int16_t *output, size_t length, uint32_t channels)
 {
 	int lvol = (PCE.PSG.volume >> 4);
 	int rvol = (PCE.PSG.volume & 0x0F);
@@ -212,6 +214,7 @@ psg_update(int16_t *output, size_t length, uint32_t channels)
 		if (!(channels & (1 << i)))
 			continue;
 
+#pragma GCC unroll(32)
 		for (int j = 0; j < length; j += 2) {
 			output[j] += mix_buffer[j] * lvol;
 			output[j + 1] += mix_buffer[j + 1] * rvol;

@@ -307,7 +307,7 @@ gfx_latch_context(int force)
 	}
 }
 
-#define LOCKED_LINES_MAX 10
+#define LOCKED_LINES_MAX 20
 uint8_t LOCKED_LINE[XBUF_WIDTH * (LOCKED_LINES_MAX + 1)] = { 0 };
 volatile int locked_line_start = 1000;
 volatile int locked_line_end = -1;

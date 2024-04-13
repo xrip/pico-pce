@@ -305,20 +305,20 @@ gfx_latch_context(int force)
 	}
 }
 
+static uint8_t TMP[XBUF_WIDTH << 1]; // TODO: detect best fit
 
-extern uint8_t SCREEN[];
+uint8_t *osd_gfx_tmp_framebuffer(int width) {
+    int offset_center = 16 + ((XBUF_WIDTH - width) / 2);
+    return (uint8_t *)TMP + offset_center;
+}
+
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
 */
 static inline void
-render_lines(int min_line, int max_line)
-{
-	gfx_context.latched = 0;
+render_line(uint8_t *screen_buffer, int line) {
 
-	uint8_t *screen_buffer = osd_gfx_framebuffer(PCE.VDC.screen_width, PCE.VDC.screen_height);
-	if (!screen_buffer) {
-		return;
-	}
+	gfx_context.latched = 0;
 
 	// Assume 16 columns of scratch area around our buffer.
 	framebuffer_top = screen_buffer - 16;
@@ -326,26 +326,38 @@ render_lines(int min_line, int max_line)
 
 	// We must fill the region with color 0 first.
 	size_t screen_width = IO_VDC_SCREEN_WIDTH;
-	for (int y = min_line; y <= max_line; y++) {
-		memset(screen_buffer + (y * XBUF_WIDTH), PCE.Palette[0], screen_width);
-	}
+	//uint8_t *tmp = osd_gfx_tmp_framebuffer(PCE.VDC.screen_width);
+	memset(screen_buffer + (line * XBUF_WIDTH), PCE.Palette[0], screen_width);
 
 	// Sprites with priority 0 are drawn behind the tiles
 	if (gfx_context.control & 0x40) {
-		draw_sprites(screen_buffer, min_line, max_line, 0);
+		draw_sprites(screen_buffer, line, line + 1, 0);
 	}
 
 	// Draw the background tiles
 	if (gfx_context.control & 0x80) {
-		draw_tiles(screen_buffer, min_line, max_line, gfx_context.scroll_x, gfx_context.scroll_y);
+		draw_tiles(screen_buffer, line, line + 1, gfx_context.scroll_x, gfx_context.scroll_y);
 	}
 
 	// Draw regular sprites
 	if (gfx_context.control & 0x40) {
-		draw_sprites(screen_buffer, min_line, max_line, 1);
+		draw_sprites(screen_buffer, line, line + 1, 1);
 	}
+
+	//memcpy(screen_buffer + (line * XBUF_WIDTH), tmp + XBUF_WIDTH, screen_width);
 }
 
+static inline void
+render_lines(int min_line, int max_line) {
+	uint8_t *screen_buffer = osd_gfx_framebuffer(PCE.VDC.screen_width, PCE.VDC.screen_height);
+	if (!screen_buffer) {
+		return;
+	}
+	uint32_t off = 0;
+	for (int ln = min_line; ln < max_line; ++ln) {
+		render_line(screen_buffer, ln);
+	}
+}
 
 int
 gfx_init(void)

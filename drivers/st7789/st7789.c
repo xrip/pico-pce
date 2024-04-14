@@ -40,10 +40,12 @@ static uint sm = 0;
 static PIO pio = pio0;
 static uint st7789_chan;
 
-uint16_t __scratch_y("tft_palette") palette[256];
+uint16_t __scratch_y(
 
-uint8_t* text_buffer = NULL;
-static uint8_t* graphics_buffer = NULL;
+"tft_palette") palette[256];
+
+uint8_t *text_buffer = NULL;
+static uint8_t *graphics_buffer = NULL;
 
 static uint graphics_buffer_width = 0;
 static uint graphics_buffer_height = 0;
@@ -53,22 +55,22 @@ static int graphics_buffer_shift_y = 0;
 enum graphics_mode_t graphics_mode = GRAPHICSMODE_DEFAULT;
 
 static const uint8_t init_seq[] = {
-    1, 20, 0x01, // Software reset
-    1, 10, 0x11, // Exit sleep mode
-    2, 2, 0x3a, 0x55, // Set colour mode to 16 bit
+        1, 20, 0x01, // Software reset
+        1, 10, 0x11, // Exit sleep mode
+        2, 2, 0x3a, 0x55, // Set colour mode to 16 bit
 #ifdef ILI9341
-    // ILI9341
-    2, 0, 0x36, MADCTL_ROW_COLUMN_EXCHANGE | MADCTL_BGR_PIXEL_ORDER, // Set MADCTL
+        // ILI9341
+        2, 0, 0x36, MADCTL_ROW_COLUMN_EXCHANGE | MADCTL_BGR_PIXEL_ORDER, // Set MADCTL
 #else
-    // ST7789
-    2, 0, 0x36, MADCTL_COLUMN_ADDRESS_ORDER_SWAP | MADCTL_ROW_COLUMN_EXCHANGE, // Set MADCTL
+        // ST7789
+        2, 0, 0x36, MADCTL_COLUMN_ADDRESS_ORDER_SWAP | MADCTL_ROW_COLUMN_EXCHANGE, // Set MADCTL
 #endif
-    5, 0, 0x2a, 0x00, 0x00, SCREEN_WIDTH >> 8, SCREEN_WIDTH & 0xff, // CASET: column addresses
-    5, 0, 0x2b, 0x00, 0x00, SCREEN_HEIGHT >> 8, SCREEN_HEIGHT & 0xff, // RASET: row addresses
-    1, 2, 0x20, // Inversion OFF
-    1, 2, 0x13, // Normal display on, then 10 ms delay
-    1, 2, 0x29, // Main screen turn on, then wait 500 ms
-    0 // Terminate list
+        5, 0, 0x2a, 0x00, 0x00, SCREEN_WIDTH >> 8, SCREEN_WIDTH & 0xff, // CASET: column addresses
+        5, 0, 0x2b, 0x00, 0x00, SCREEN_HEIGHT >> 8, SCREEN_HEIGHT & 0xff, // RASET: row addresses
+        1, 2, 0x20, // Inversion OFF
+        1, 2, 0x13, // Normal display on, then 10 ms delay
+        1, 2, 0x29, // Main screen turn on, then wait 500 ms
+        0 // Terminate list
 };
 // Format: cmd length (including cmd byte), post delay in units of 5 ms, then cmd payload
 // Note the delays have been shortened a little
@@ -79,7 +81,7 @@ static inline void lcd_set_dc_cs(const bool dc, const bool cs) {
     sleep_us(5);
 }
 
-static inline void lcd_write_cmd(const uint8_t* cmd, size_t count) {
+static inline void lcd_write_cmd(const uint8_t *cmd, size_t count) {
     st7789_lcd_wait_idle(pio, sm);
     lcd_set_dc_cs(0, 0);
     st7789_lcd_put(pio, sm, *cmd++);
@@ -108,8 +110,8 @@ static inline void lcd_set_window(const uint16_t x,
     lcd_write_cmd(screen_height_command, 5);
 }
 
-static inline void lcd_init(const uint8_t* init_seq) {
-    const uint8_t* cmd = init_seq;
+static inline void lcd_init(const uint8_t *init_seq) {
+    const uint8_t *cmd = init_seq;
     while (*cmd) {
         lcd_write_cmd(cmd + 2, *cmd);
         sleep_ms(*(cmd + 1) * 5);
@@ -142,12 +144,12 @@ void create_dma_channel() {
     channel_config_set_write_increment(&c, false);
 
     dma_channel_configure(
-        st7789_chan, // Channel to be configured
-        &c, // The configuration we just created
-        &pio->txf[sm], // The write address
-        NULL, // The initial read address - set later
-        0, // Number of transfers - set later
-        false // Don't start yet
+            st7789_chan, // Channel to be configured
+            &c, // The configuration we just created
+            &pio->txf[sm], // The write address
+            NULL, // The initial read address - set later
+            0, // Number of transfers - set later
+            false // Don't start yet
     );
 }
 
@@ -185,13 +187,13 @@ void inline graphics_set_mode(const enum graphics_mode_t mode) {
     graphics_mode = mode;
 }
 
-void graphics_set_buffer(uint8_t* buffer, const uint16_t width, const uint16_t height) {
+void graphics_set_buffer(uint8_t *buffer, const uint16_t width, const uint16_t height) {
     graphics_buffer = buffer;
     graphics_buffer_width = width;
     graphics_buffer_height = height;
 }
 
-void graphics_set_textbuffer(uint8_t* buffer) {
+void graphics_set_textbuffer(uint8_t *buffer) {
     text_buffer = buffer;
 }
 
@@ -202,7 +204,7 @@ void graphics_set_offset(const int x, const int y) {
 
 void clrScr(const uint8_t color) {
     memset(&graphics_buffer[0], 0, graphics_buffer_height * graphics_buffer_width);
-    lcd_set_window(0, 0,SCREEN_WIDTH,SCREEN_HEIGHT);
+    lcd_set_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     uint32_t i = SCREEN_WIDTH * SCREEN_HEIGHT;
     start_pixels();
     while (--i) {
@@ -211,17 +213,21 @@ void clrScr(const uint8_t color) {
     stop_pixels();
 }
 
-void st7789_dma_pixels(const uint16_t* pixels, const uint num_pixels) {
+void st7789_dma_pixels(const uint16_t *pixels, const uint num_pixels) {
     // Ensure any previous transfer is finished.
     dma_channel_wait_for_finish_blocking(st7789_chan);
 
-    dma_channel_hw_addr(st7789_chan)->read_addr = (uintptr_t)pixels;
+    dma_channel_hw_addr(st7789_chan)->read_addr = (uintptr_t) pixels;
     dma_channel_hw_addr(st7789_chan)->transfer_count = num_pixels;
     const uint ctrl = dma_channel_hw_addr(st7789_chan)->ctrl_trig;
     dma_channel_hw_addr(st7789_chan)->ctrl_trig = ctrl | DMA_CH0_CTRL_TRIG_INCR_READ_BITS;
 }
 
-void __inline __scratch_y("refresh_lcd") refresh_lcd() {
+void __inline __scratch_y(
+
+"refresh_lcd")
+
+refresh_lcd() {
     switch (graphics_mode) {
         case TEXTMODE_DEFAULT:
             lcd_set_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -247,15 +253,13 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
             stop_pixels();
             break;
         case GRAPHICSMODE_DEFAULT: {
-            const uint8_t* bitmap = graphics_buffer;
             lcd_set_window(graphics_buffer_shift_x, graphics_buffer_shift_y, graphics_buffer_width,
                            graphics_buffer_height);
-            uint32_t i = graphics_buffer_width * graphics_buffer_height;
             start_pixels();
             // st7789_dma_pixels(graphics_buffer, i);
-            while (--i) {
-               st7789_lcd_put_pixel(pio, sm, palette[*bitmap++ ]);
-            }
+            for (int y = 0; y < graphics_buffer_height * (16 + 256 + 16); y += (16 + 256 + 16))
+                for (int x = 0; x < graphics_buffer_width; x++)
+                    st7789_lcd_put_pixel(pio, sm, palette[graphics_buffer[x + y]]);
             stop_pixels();
         }
     }
@@ -265,6 +269,6 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
 
 
 void graphics_set_palette(const uint8_t i, const uint32_t color) {
-    palette[i] = (uint16_t)color;
+    palette[i] = (uint16_t) color;
 }
 

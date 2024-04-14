@@ -1,5 +1,6 @@
 #pragma GCC optimize("Ofast")
 #include "pico/platform.h"
+#include "pico/runtime.h"
 // gfx.c - VDC/VCE Emulation
 //
 #include <stdlib.h>
@@ -7,7 +8,7 @@
 #include "pce.h"
 #include "gfx.h"
 
-#define LOCKED_LINES_MAX 20
+#define LOCKED_LINES_MAX 64
 static uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
 static int locked_line = 0;
 
@@ -110,7 +111,7 @@ draw_tiles(int Y1, int Y2, int scroll_x, int scroll_y)
 /*
 	Draw sprite C to framebuffer P
 */
-static void
+static void __always_inline
 draw_sprite(uint8_t *P, const uint16_t *C, int height, uint32_t attr)
 {
 	uint8_t *PAL = &PCE.Palette[256 + ((attr & 0xF) << 4)];

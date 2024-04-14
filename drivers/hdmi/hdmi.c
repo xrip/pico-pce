@@ -199,7 +199,7 @@ static void __scratch_y("hdmi_driver") dma_handler_HDMI() {
                 output_buffer += graphics_buffer_shift_x;
 
                 //рисуем сам видеобуфер+пространство справа
-                input_buffer = &graphics_buffer[(y - graphics_buffer_shift_y) * graphics_buffer_width];
+                input_buffer = &graphics_buffer[(y - graphics_buffer_shift_y) * (352+16)];
 
                 const uint8_t* input_buffer_end = input_buffer + graphics_buffer_width;
 

@@ -14,7 +14,7 @@
 #define crc32_le(a, b, c) rg_crc32(a, b, c)
 #else
 #define LOG_PRINTF(level, x...) printf(x)
-#define IRAM_ATTR
+#define IRAM_ATTR __always_inline
 #define crc32_le(a, b, c) (0)
 #endif
 
@@ -68,7 +68,7 @@
 
 // We need 16 bytes of scratch area on both side of each line. The 16 bytes can be shared by adjacent lines.
 // The buffer should look like [16 bytes] [line 1] [16 bytes] ... [16 bytes] [line 242] [16 bytes]
-#define XBUF_WIDTH 	(352 + 16)
+#define XBUF_WIDTH 	(16 + 256 + 16)
 #define	XBUF_HEIGHT	(242 + 4)
 
 int LoadState(const char *name);

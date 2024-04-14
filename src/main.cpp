@@ -492,7 +492,31 @@ bool load() {
 //    free(data);
     return true;
 }
+#if SOFTTV
+typedef struct tv_out_mode_t {
+    // double color_freq;
+    float color_index;
+    COLOR_FREQ_t c_freq;
+    enum graphics_mode_t mode_bpp;
+    g_out_TV_t tv_system;
+    NUM_TV_LINES_t N_lines;
+    bool cb_sync_PI_shift_lines;
+    bool cb_sync_PI_shift_half_frame;
+} tv_out_mode_t;
+extern tv_out_mode_t tv_out_mode;
 
+bool color_mode=true;
+bool toggle_color() {
+    color_mode=!color_mode;
+    if(color_mode) {
+        tv_out_mode.color_index= 1.0f;
+    } else {
+        tv_out_mode.color_index= 0.0f;
+    }
+
+    return true;
+}
+#endif
 
 const MenuItem menu_items[] = {
         { "Swap AB <> BA: %s", ARRAY, &swap_ab, nullptr, 1, { "NO ", "YES" }},
@@ -503,6 +527,14 @@ const MenuItem menu_items[] = {
 //        { "Save state: %i", INT, &save_slot, &save, 5 },
 //        { "Load state: %i", INT, &save_slot, &load, 5 },
         {},
+#if SOFTTV
+        { "TV system %s", ARRAY, &tv_out_mode.tv_system, nullptr, 1, { "PAL ", "NTSC" } },
+        { "TV Lines %s", ARRAY, &tv_out_mode.N_lines, nullptr, 3, { "624", "625", "524", "525" } },
+        { "Freq %s", ARRAY, &tv_out_mode.c_freq, nullptr, 1, { "3.579545", "4.433619" } },
+        { "Colors: %s", ARRAY, &color_mode, &toggle_color, 1, { "NO ", "YES" } },
+        { "Shift lines %s", ARRAY, &tv_out_mode.cb_sync_PI_shift_lines, nullptr, 1, { "NO ", "YES" } },
+        { "Shift half frame %s", ARRAY, &tv_out_mode.cb_sync_PI_shift_half_frame, nullptr, 1, { "NO ", "YES" } },
+#endif
         {
                 "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
                 { "378", "396", "404", "408", "412", "416", "420", "424", "432" }
@@ -623,8 +655,18 @@ void __time_critical_func(render_core)() {
     const auto buffer = (uint8_t *) SCREEN;
     graphics_set_buffer(buffer, 256, 240);
     graphics_set_textbuffer(buffer);
+    graphics_set_bgcolor(0x000000);
 
-    graphics_set_offset(32, 0);
+    graphics_set_offset(32,0);
+
+    for (int i = 0; i < 256; i++) {
+        graphics_set_palette(i, RGB888(
+                                     (((i & 0x1C) >> 1) * 16),
+                                     (((i & 0xe0) >> 4) * 16),
+                                     (((i & 0x03) << 2) * 16)
+                             )
+        );
+    }
 
     graphics_set_flashmode(true, true);
     sem_acquire_blocking(&vga_start_semaphore);
@@ -672,16 +714,6 @@ int main() {
     multicore_launch_core1(render_core);
     sem_release(&vga_start_semaphore);
 
-    for (int i = 0; i < 256; i++) {
-        graphics_set_palette(i, RGB888(
-                                     (((i & 0x1C) >> 1) * 16),
-                                     (((i & 0xe0) >> 4) * 16),
-                                     (((i & 0x03) << 2) * 16)
-                             )
-        );
-    }
-
-
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 
@@ -694,16 +726,10 @@ int main() {
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);
         filebrowser(HOME_DIR, "pce");
-        if (!InitPCE(AUDIO_SAMPLE_RATE, true, (uint8_t *) rom, rom_size)) {
-
-
-        }
-        sleep_ms(1000);
+        InitPCE(AUDIO_SAMPLE_RATE, true, (uint8_t *) rom, rom_size);
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
         while (!reboot) {
-            pce_run();
-
             uint32_t buttons = 0;
             if (gamepad1_bits.left || keyboard_bits.left) buttons |= JOY_LEFT;
             if (gamepad1_bits.right || keyboard_bits.right) buttons |= JOY_RIGHT;
@@ -718,6 +744,8 @@ int main() {
             if ((gamepad1_bits.start && gamepad1_bits.select) || (keyboard_bits.start && keyboard_bits.select)) {
                 menu();
             }
+
+            pce_run();
 
             psg_update((int16_t *) audio_buffer, AUDIO_BUFFER_LENGTH, 0xff);
             i2s_dma_write(&i2s_config, (const int16_t *) audio_buffer);

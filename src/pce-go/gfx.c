@@ -7,6 +7,10 @@
 #include "pce.h"
 #include "gfx.h"
 
+#define LOCKED_LINES_MAX 20
+static uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
+static int locked_line = 0;
+
 #define PAL(nibble) (PAL[(L >> ((nibble) * 4)) & 15])
 
 #define V_FLIP  0x8000
@@ -22,7 +26,6 @@ static struct {
 	int latched;
 } gfx_context;
 
-extern uint8_t SCREEN[];
 static uint8_t *framebuffer_top, *framebuffer_bottom;
 
 /*
@@ -47,7 +50,7 @@ draw_tiles(int Y1, int Y2, int scroll_x, int scroll_y)
 
 	y >>= 3;
 
-	uint8_t *PP = (SCREEN + XBUF_WIDTH * Y1) - (scroll_x & 7);
+	uint8_t *PP = (LOCKED_LINE + XBUF_WIDTH * (Y1 - locked_line)) - (scroll_x & 7);
 
 	for (int line = Y1; line < Y2; y++) {
 		x = scroll_x / 8;
@@ -238,7 +241,8 @@ draw_sprites(int Y1, int Y2, int priority)
 
 		cgy *= 16;
 
-		uint8_t *P = SCREEN + ((attr & V_FLIP ? cgy + y : y) * XBUF_WIDTH) + x;
+        int yi = y - locked_line;
+		uint8_t *P = LOCKED_LINE + ((attr & V_FLIP ? cgy + yi : yi) * XBUF_WIDTH) + x;
 		uint16_t *C = PCE.VRAM + (no * 64);
 
 		for (int yy = 0; yy <= cgy; yy += 16) {
@@ -307,10 +311,7 @@ gfx_latch_context(int force)
 	}
 }
 
-#define LOCKED_LINES_MAX 20
-uint8_t LOCKED_LINE[XBUF_WIDTH * (LOCKED_LINES_MAX + 1)] = { 0 };
-volatile int locked_line_start = 1000;
-volatile int locked_line_end = -1;
+extern uint8_t SCREEN[];
 
 /*
 	Render lines into the buffer from min_line to max_line (inclusive)
@@ -319,14 +320,9 @@ static __always_inline void
 render_line(int ln, int sz) {
 	gfx_context.latched = 0;
 
-	// we will show this line for the time line is rendering
-	uint8_t * buf = SCREEN + (ln * XBUF_WIDTH);
-	memcpy(LOCKED_LINE, buf, XBUF_WIDTH * (sz + 1));
-	locked_line_start = ln;
-	locked_line_end = ln + sz;
-
     // We must fill the region with color 0 first.
-    memset(buf, PCE.Palette[0], XBUF_WIDTH * sz);
+    memset(LOCKED_LINE, PCE.Palette[0], XBUF_WIDTH * sz);
+    locked_line = ln;
 
 	// Sprites with priority 0 are drawn behind the tiles
 	if (gfx_context.control & 0x40) {
@@ -342,8 +338,11 @@ render_line(int ln, int sz) {
 	if (gfx_context.control & 0x40) {
 		draw_sprites(ln, ln + sz, 1);
 	}
-	locked_line_start = 1000;
-	locked_line_end = -1;
+
+	// we will show this line for the time line is rendering
+	uint8_t * buf = SCREEN + (ln * XBUF_WIDTH);
+
+	memcpy(buf, LOCKED_LINE, XBUF_WIDTH * sz);
 }
 
 static __always_inline void
@@ -358,8 +357,8 @@ gfx_init(void)
 {
 	gfx_reset(true);
     // Assume 16 columns of scratch area around our buffer.
-    framebuffer_top = SCREEN - 16;
-    framebuffer_bottom = SCREEN + (256) * XBUF_WIDTH;
+    framebuffer_top = LOCKED_LINE;
+    framebuffer_bottom = LOCKED_LINE + XBUF_WIDTH * LOCKED_LINES_MAX;
 	return 0;
 }
 

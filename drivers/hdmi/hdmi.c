@@ -199,10 +199,13 @@ static void __scratch_y("hdmi_driver") dma_handler_HDMI() {
                 output_buffer += graphics_buffer_shift_x;
 
                 //рисуем сам видеобуфер+пространство справа
-                input_buffer = &graphics_buffer[(y - graphics_buffer_shift_y) * (352+16)];
+                input_buffer = &graphics_buffer[(y - graphics_buffer_shift_y) * (16+320+16)];
 
                 const uint8_t* input_buffer_end = input_buffer + graphics_buffer_width;
 
+                if (graphics_buffer_width == 320) {
+                    input_buffer += 16;
+                }
                 if (graphics_buffer_shift_x < 0) input_buffer -= graphics_buffer_shift_x;
 
                 while (activ_buf_end > output_buffer) {

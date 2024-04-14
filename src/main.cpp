@@ -720,6 +720,7 @@ int main() {
         InitPCE(AUDIO_SAMPLE_RATE, true, (uint8_t *) rom, rom_size);
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
+        frame = 0;
         while (!reboot) {
             uint32_t buttons = 0;
             if (gamepad1_bits.left || keyboard_bits.left) buttons |= JOY_LEFT;
@@ -737,6 +738,9 @@ int main() {
             }
 
             pce_run();
+
+                graphics_set_buffer((uint8_t*)SCREEN, PCE.VDC.screen_width == 256 ? 256 : 320, PCE.VDC.screen_height);
+                graphics_set_offset(PCE.VDC.screen_width == 256 ? 32 : 0,0);
 
             psg_update((int16_t *) audio_buffer, AUDIO_BUFFER_LENGTH, 0xff);
             i2s_dma_write(&i2s_config, (const int16_t *) audio_buffer);

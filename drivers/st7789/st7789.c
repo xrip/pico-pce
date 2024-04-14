@@ -75,6 +75,8 @@ static const uint8_t init_seq[] = {
 // Format: cmd length (including cmd byte), post delay in units of 5 ms, then cmd payload
 // Note the delays have been shortened a little
 
+static int x_offset;
+
 static inline void lcd_set_dc_cs(const bool dc, const bool cs) {
     sleep_us(5);
     gpio_put_masked((1u << TFT_DC_PIN) | (1u << TFT_CS_PIN), !!dc << TFT_DC_PIN | !!cs << TFT_CS_PIN);
@@ -191,6 +193,7 @@ void graphics_set_buffer(uint8_t *buffer, const uint16_t width, const uint16_t h
     graphics_buffer = buffer;
     graphics_buffer_width = width;
     graphics_buffer_height = height;
+    x_offset = graphics_buffer_width == 320 ? 16 : 0;
 }
 
 void graphics_set_textbuffer(uint8_t *buffer) {
@@ -257,9 +260,11 @@ refresh_lcd() {
                            graphics_buffer_height);
             start_pixels();
             // st7789_dma_pixels(graphics_buffer, i);
-            for (int y = 0; y < graphics_buffer_height * (16 + 256 + 16); y += (16 + 256 + 16))
+
+
+            for (int y = 0; y < graphics_buffer_height * (16 + 320 + 16); y += (16 + 320 + 16))
                 for (int x = 0; x < graphics_buffer_width; x++)
-                    st7789_lcd_put_pixel(pio, sm, palette[graphics_buffer[x + y]]);
+                    st7789_lcd_put_pixel(pio, sm, palette[graphics_buffer[x_offset+x + y]]);
             stop_pixels();
         }
     }

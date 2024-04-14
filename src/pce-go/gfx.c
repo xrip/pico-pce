@@ -7,8 +7,9 @@
 #include <string.h>
 #include "pce.h"
 #include "gfx.h"
+#include "graphics.h"
 
-#define LOCKED_LINES_MAX 64
+#define LOCKED_LINES_MAX 16
 static uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
 static int locked_line = 0;
 

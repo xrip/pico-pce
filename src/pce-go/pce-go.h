@@ -68,7 +68,7 @@
 
 // We need 16 bytes of scratch area on both side of each line. The 16 bytes can be shared by adjacent lines.
 // The buffer should look like [16 bytes] [line 1] [16 bytes] ... [16 bytes] [line 242] [16 bytes]
-#define XBUF_WIDTH 	(16 + 256 + 16)
+#define XBUF_WIDTH 	(16 + 320 + 16)
 #define	XBUF_HEIGHT	(242 + 4)
 
 int LoadState(const char *name);

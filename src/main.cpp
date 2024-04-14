@@ -52,9 +52,9 @@ static input_bits_t keyboard_bits = { false, false, false, false, false, false, 
 static input_bits_t gamepad1_bits = { false, false, false, false, false, false, false, false };
 static input_bits_t gamepad2_bits = { false, false, false, false, false, false, false, false };
 
-bool swap_ab = false;
+static bool swap_ab = false;
 
-void nespad_tick() {
+static void nespad_tick() {
     nespad_read();
 
     uint8_t controls_state = 0;
@@ -84,9 +84,6 @@ void nespad_tick() {
     if (gamepad1_bits.b) controls_state |= 0x10;
     if (gamepad1_bits.start) controls_state |= 0x80;
     if (gamepad1_bits.select) controls_state |= 0x40;
-    // if (gamepad1_bits.down) smsSystem|=INPUT_SOFT_RESET;
-    // if (gamepad1_bits.down) smsSystem|=INPUT_HARD_RESET;
-    //supervision_set_input(controls_state);
 }
 
 static bool isInReport(hid_keyboard_report_t const* report, const unsigned char keycode) {
@@ -696,12 +693,6 @@ void __time_critical_func(render_core)() {
     }
 
     __unreachable();
-}
-
-uint8_t *osd_gfx_framebuffer(int width, int height)
-{
-    int offset_center = 16 + ((XBUF_WIDTH - width) / 2);
-    return (uint8_t *)SCREEN + offset_center;
 }
 
 int frame, frame_cnt = 0;

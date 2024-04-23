@@ -747,7 +747,7 @@ int main() {
 
 
             frame++;
-            if (1) {
+            if (0) {
 
                 if (++frame_cnt == 6) {
                     while (time_us_64() - frame_timer_start < 16666 * 6);  // 60 Hz

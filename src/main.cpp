@@ -34,7 +34,7 @@ static FATFS fs;
 bool reboot = false;
 semaphore vga_start_semaphore;
 
-alignas(4096) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
+alignas(4) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
 alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
 
 struct input_bits_t {

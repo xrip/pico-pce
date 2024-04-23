@@ -10,7 +10,7 @@
 #include "graphics.h"
 
 #define LOCKED_LINES_MAX 16
-static uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
+static __aligned(4) uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
 static int locked_line = 0;
 
 #define PAL(nibble) (PAL[(L >> ((nibble) * 4)) & 15])

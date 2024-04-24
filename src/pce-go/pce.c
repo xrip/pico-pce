@@ -544,6 +544,7 @@ pce_writeIO(uint16_t A, uint8_t V)
 			return;
 
 		case 4:                                 // Color table data (LSB)
+            if (PCE.VCE.reg > 0x200) return;
 			PCE.VCE.regs[PCE.VCE.reg].B.l = V;
 			{
 				size_t n = PCE.VCE.reg;
@@ -557,6 +558,7 @@ pce_writeIO(uint16_t A, uint8_t V)
 			return;
 
 		case 5:                                 // Color table data (MSB)
+            if (PCE.VCE.reg > 0x200) return;
 			PCE.VCE.regs[PCE.VCE.reg].B.h = V;
 			{
 				size_t n = PCE.VCE.reg;

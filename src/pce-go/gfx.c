@@ -250,7 +250,7 @@ draw_sprites(int Y1, int Y2, int priority)
 		for (int yy = 0; yy <= cgy; yy += 16) {
 			int height = 16;
 			if (attr & V_FLIP) {
-				height = MIN(16, Y2 - y - (cgy - yy));
+				height = MIN(16, Y2 - yi - (cgy - yy));
 			} else {
 				int t = Y1 - y - yy;
 				if (t > 0) {

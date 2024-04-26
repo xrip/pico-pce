@@ -9,8 +9,8 @@
 #include "gfx.h"
 #include "graphics.h"
 
-#define LOCKED_LINES_MAX 30
-static uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX + 32] = { 0 };
+#define LOCKED_LINES_MAX 16
+static __aligned(4) uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
 static int locked_line = 0;
 
 #define PAL(nibble) (PAL[(L >> ((nibble) * 4)) & 15])
@@ -52,7 +52,7 @@ draw_tiles(int Y1, int Y2, int scroll_x, int scroll_y)
 
 	y >>= 3;
 
-	uint8_t *PP = (LOCKED_LINE + 16 + XBUF_WIDTH * (Y1 - locked_line)) - (scroll_x & 7);
+	uint8_t *PP = (LOCKED_LINE + XBUF_WIDTH * (Y1 - locked_line)) - (scroll_x & 7);
 
 	for (int line = Y1; line < Y2; y++) {
 		x = scroll_x / 8;
@@ -74,7 +74,7 @@ draw_tiles(int Y1, int Y2, int scroll_x, int scroll_y)
 				if (!J)
 					continue;
 
-				if (P >= framebuffer_bottom) {
+				if (P + 8 >= framebuffer_bottom) {
 					MESSAGE_DEBUG("tile overflow!\n");
 					break;
 				} else if (P < framebuffer_top) {
@@ -134,7 +134,7 @@ draw_sprite(uint8_t *P, const uint16_t *C, int height, uint32_t attr)
 			continue;
 
 		// This will also need to be handled in draw_sprites... (it could adjust simply constrain the height)
-		if (P >= framebuffer_bottom) {
+		if (P + 16 >= framebuffer_bottom) {
 			MESSAGE_DEBUG("sprite overflow %d!\n", i);
 			break;
 		} else if (P < framebuffer_top) {
@@ -244,13 +244,13 @@ draw_sprites(int Y1, int Y2, int priority)
 		cgy *= 16;
 
         int yi = y - locked_line;
-		uint8_t *P = LOCKED_LINE + 16 + ((attr & V_FLIP ? cgy + yi : yi) * XBUF_WIDTH) + x;
+		uint8_t *P = LOCKED_LINE + ((attr & V_FLIP ? cgy + yi : yi) * XBUF_WIDTH) + x;
 		uint16_t *C = PCE.VRAM + (no * 64);
 
 		for (int yy = 0; yy <= cgy; yy += 16) {
 			int height = 16;
 			if (attr & V_FLIP) {
-				height = MIN(16, Y2 - y - (cgy - yy));
+				height = MIN(16, Y2 - yi - (cgy - yy));
 			} else {
 				int t = Y1 - y - yy;
 				if (t > 0) {
@@ -323,7 +323,7 @@ render_line(int ln, int sz) {
 	gfx_context.latched = 0;
 
     // We must fill the region with color 0 first.
-    memset(LOCKED_LINE + 16, PCE.Palette[0], XBUF_WIDTH * sz);
+    memset(LOCKED_LINE, PCE.Palette[0], XBUF_WIDTH * sz);
     locked_line = ln;
 
 	// Sprites with priority 0 are drawn behind the tiles
@@ -344,7 +344,7 @@ render_line(int ln, int sz) {
 	// we will show this line for the time line is rendering
 	uint8_t * buf = SCREEN + (ln * XBUF_WIDTH);
 
-	memcpy(buf, LOCKED_LINE + 16, XBUF_WIDTH * sz);
+	memcpy(buf, LOCKED_LINE, XBUF_WIDTH * sz);
 }
 
 static __always_inline void
@@ -360,7 +360,7 @@ gfx_init(void)
 	gfx_reset(true);
     // Assume 16 columns of scratch area around our buffer.
     framebuffer_top = LOCKED_LINE;
-    framebuffer_bottom = LOCKED_LINE + 32 + XBUF_WIDTH * LOCKED_LINES_MAX;
+    framebuffer_bottom = LOCKED_LINE + XBUF_WIDTH * LOCKED_LINES_MAX;
 	return 0;
 }
 

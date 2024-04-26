@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "ff.h"
 
 #ifdef RETRO_GO
 #include <rg_system.h>

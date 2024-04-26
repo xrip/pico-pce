@@ -34,7 +34,7 @@ static FATFS fs;
 bool reboot = false;
 semaphore vga_start_semaphore;
 
-alignas(4096) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
+alignas(4) uint8_t SCREEN[XBUF_HEIGHT][XBUF_WIDTH];
 alignas(4) int audio_buffer[AUDIO_BUFFER_LENGTH];
 
 struct input_bits_t {
@@ -455,14 +455,14 @@ bool save() {
     }
 
     FRESULT fr = f_mount(&fs, "", 1);
-    FIL fd;
-    fr = f_open(&fd, pathname, FA_CREATE_ALWAYS | FA_WRITE);
-    UINT bytes_writen;
+//    FIL fd;
+//    fr = f_open(&fd, pathname, FA_CREATE_ALWAYS | FA_WRITE);
+//    UINT bytes_writen;
 
 //    supervision_save_state_buf((uint8*)data, (uint32)size);
 //    f_write(&fd, data, size, &bytes_writen);
-    f_close(&fd);
-
+//    f_close(&fd);
+    SaveState(pathname);
     return true;
 }
 
@@ -478,15 +478,17 @@ bool load() {
     }
 
     FRESULT fr = f_mount(&fs, "", 1);
-    FIL fd;
-    fr = f_open(&fd, pathname, FA_READ);
-    UINT bytes_read;
+
+//    FIL fd;
+//    fr = f_open(&fd, pathname, FA_READ);
+//    UINT bytes_read;
 
 //    f_read(&fd, data, size, &bytes_read);
 //    supervision_load_state_buf((uint8*)data, (uint32)size);
-    f_close(&fd);
+//    f_close(&fd);
 
 //    free(data);
+    LoadState(pathname);
     return true;
 }
 #if SOFTTV
@@ -520,9 +522,8 @@ const MenuItem menu_items[] = {
         {},
         //{ "Player 1: %s",        ARRAY, &player_1_input, 2, { "Keyboard ", "Gamepad 1", "Gamepad 2" }},
         //{ "Player 2: %s",        ARRAY, &player_2_input, 2, { "Keyboard ", "Gamepad 1", "Gamepad 2" }},
-//        {},
-//        { "Save state: %i", INT, &save_slot, &save, 5 },
-//        { "Load state: %i", INT, &save_slot, &load, 5 },
+        { "Save state: %i", INT, &save_slot, &save, 5 },
+        { "Load state: %i", INT, &save_slot, &load, 5 },
         {},
 #if SOFTTV
         { "TV system %s", ARRAY, &tv_out_mode.tv_system, nullptr, 1, { "PAL ", "NTSC" } },
@@ -747,7 +748,7 @@ int main() {
 
 
             frame++;
-            if (1) {
+            if (0) {
 
                 if (++frame_cnt == 6) {
                     while (time_us_64() - frame_timer_start < 16666 * 6);  // 60 Hz

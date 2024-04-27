@@ -14,7 +14,8 @@
 #define LOG_PRINTF(level, x...) rg_system_log(RG_LOG_USER, NULL, x)
 #define crc32_le(a, b, c) rg_crc32(a, b, c)
 #else
-#define LOG_PRINTF(level, x...) printf(x)
+//#define LOG_PRINTF(level, x...) printf(x)
+#define LOG_PRINTF(level, x...) {}
 #define IRAM_ATTR __always_inline
 #define crc32_le(a, b, c) (0)
 #endif

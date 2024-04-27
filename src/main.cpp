@@ -488,8 +488,7 @@ bool load() {
 //    f_close(&fd);
 
 //    free(data);
-    LoadState(pathname);
-    return true;
+    return LoadState(pathname) > -1;
 }
 #if SOFTTV
 typedef struct tv_out_mode_t {

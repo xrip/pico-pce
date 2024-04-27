@@ -329,12 +329,12 @@ int LoadState(const char *name) {
     if (f_open(&fp, name, FA_READ) != FR_OK)
         return -1;
 
-    if (FR_OK != f_read(&fp, &buffer, 8, &br) || memcmp(&buffer, SAVESTATE_HEADER, 8) != 0) {
+    if (FR_OK != f_read(&fp, &buffer, 8, &br) || !br || memcmp(&buffer, SAVESTATE_HEADER, 8) != 0) {
         MESSAGE_ERROR("Loading state failed: Header mismatch\n");
         goto _cleanup;
     }
 
-    while (FR_OK == f_read(&fp, &block, sizeof(block), &br)) {
+    while (FR_OK == f_read(&fp, &block, sizeof(block), &br) && br) {
         size_t block_end = f_tell(&fp) + block.len;
 
         for (save_var_t *var = SaveStateVars; var->ptr; var++) {
@@ -342,7 +342,7 @@ int LoadState(const char *name) {
                 void *ptr = var->ptr;
                 size_t len = MIN((size_t) var->desc.len, (size_t) block.len);
                 //memset(ptr, 0, var->desc.len);
-                if (FR_OK != f_read(&fp, ptr, len, &br)) {
+                if (FR_OK != f_read(&fp, ptr, len, &br) || !br) {
                     MESSAGE_ERROR("fread error reading block data\n");
                     goto _cleanup;
                 }

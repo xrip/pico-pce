@@ -1,7 +1,7 @@
 // psg.c - Programmable Sound Generator
 //
 #pragma GCC optimize("Ofast")
-#include "pico/platform.h"
+#include "pico.h"
 #include <stdlib.h>
 #include <string.h>
 #include "pce.h"

@@ -218,7 +218,7 @@ __not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid
 
 Ps2Kbd_Mrmltr ps2kbd(
         pio1,
-        0,
+        PS2KBD_GPIO_FIRST,
         process_kbd_report
 );
 
@@ -279,7 +279,7 @@ bool filebrowser_loadfile(const char pathname[256]) {
     FILINFO fileinfo;
     f_stat(pathname, &fileinfo);
     rom_size = fileinfo.fsize;
-#ifdef PICO_PC
+#if defined(PICO_PC) || defined(BOARD_Z0)
     /* The ROM goes right after the firmware; the top 512 KB of the 4 MB flash
      * stay untouched (pico-launcher lives in the last 260 KB). */
     if (FLASH_TARGET_OFFSET + fileinfo.fsize > PICO_FLASH_SIZE_BYTES - (512u << 10)) {

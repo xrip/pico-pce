@@ -18,14 +18,18 @@ set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
 #set(PICO_BOARD "murmulator" CACHE STRING "Board type")
 #set(PICO_BOARD "murmulator2" CACHE STRING "Board type")
 #set(PICO_BOARD "rp2040pizero" CACHE STRING "Board type")
-set(PICO_BOARD "olimex-pico-pc" CACHE STRING "Board type")
+#set(PICO_BOARD "olimex-pico-pc" CACHE STRING "Board type")
+set(PICO_BOARD "waveshare_rp2350_pizero" CACHE STRING "Board type")
 
-# Waveshare RP2350-PiZero with RP2350B (z0p2): cmake -DZ0=ON (I2S sound module required)
-option(Z0 "Waveshare RP2350-PiZero (z0p2)" OFF)
-if(Z0)
+if(${PICO_BOARD} MATCHES "waveshare_rp2350_pizero")
     set(PICO_BOARD waveshare_rp2350_pizero CACHE STRING "Board type" FORCE)
     set(PICO_FLASH_SIZE_BYTES 16777216 CACHE STRING "" FORCE)
     set(I2S ON CACHE BOOL "Enable I2S sound" FORCE)
+	set(USB_HID ON CACHE BOOL "Enable I2S sound" FORCE)
+endif()
+if(${PICO_BOARD} MATCHES "olimex-pico-pc")
+    set(I2S OFF CACHE BOOL "Enable I2S sound" FORCE)
+	set(USB_HID ON CACHE BOOL "Enable I2S sound" FORCE)
 endif()
 
 set(PICO_PLATFORM "rp2350" CACHE STRING "Chip type")
@@ -187,7 +191,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 		tinyusb_board
 )
 
-if (${PICO_BOARD} MATCHES "olimex-pico-pc")
+if (USB_HID)
 	# The PICO-PC keyboard is a USB keyboard on the Pico's native USB port
 	# (TinyUSB host, src/hid_app.cpp); PS/2 on GPIO0/1 keeps working too.
 	target_compile_definitions(${PROJECT_NAME} PRIVATE KBDUSB)

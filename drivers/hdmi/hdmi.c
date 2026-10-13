@@ -61,7 +61,9 @@ static uint32_t irq_inx = 0;
 
 //функции и константы HDMI
 
-#define BASE_HDMI_CTRL_INX (240)
+// palette slots BASE..BASE+3 hold the TMDS sync symbols, 255 is the
+// background colour; frame pixels in this range are shown as near colours
+#define BASE_HDMI_CTRL_INX (251)
 //программа конвертации адреса
 
 uint16_t pio_program_instructions_conv_HDMI[] = {
@@ -216,7 +218,10 @@ static void __scratch_y("hdmi_driver") dma_handler_HDMI() {
                 while (activ_buf_end > output_buffer) {
                     if (input_buffer < input_buffer_end) {
                         uint8_t i_color = *input_buffer++;
-                        i_color = ((i_color & 0xf0) == 0xf0) ? 255 : i_color;
+                        /* PCE pixels are GGGRRRBB: dropping the low G bit gives the
+                         * nearest colour outside the reserved slots (251..255 ->
+                         * 219..223, one green step darker) */
+                        if (i_color >= BASE_HDMI_CTRL_INX) i_color ^= 0x20;
                         *output_buffer++ = i_color;
                     } else
                         *output_buffer++ = 255;
@@ -346,13 +351,13 @@ static inline bool hdmi_init() {
     pio_set_x(PIO_VIDEO_ADDR, SM_conv, ((uint32_t) conv_color >> 12));
 
     //заполнение палитры
-    for (int ci = 0; ci < 240; ci++) graphics_set_palette(ci, palette[ci]); //
+    for (int ci = 0; ci < BASE_HDMI_CTRL_INX; ci++) graphics_set_palette(ci, palette[ci]); //
 
     //255 - цвет фона
     graphics_set_palette(255, palette[255]);
 
 
-    //240-243 служебные данные(синхра) напрямую вносим в массив -конвертер
+    //BASE_HDMI_CTRL_INX..+3 служебные данные(синхра) напрямую вносим в массив -конвертер
     uint64_t* conv_color64 = (uint64_t *) conv_color;
     const uint16_t b0 = 0b1101010100;
     const uint16_t b1 = 0b0010101011;
@@ -394,8 +399,13 @@ static inline bool hdmi_init() {
         gpio_set_slew_rate(beginHDMI_PIN_clk + i, GPIO_SLEW_RATE_FAST);
     }
 
+#if beginHDMI_PIN_clk >= 32
+    pio_sm_set_pins_with_mask64(PIO_VIDEO, SM_video, 3ull << beginHDMI_PIN_clk, 3ull << beginHDMI_PIN_clk);
+    pio_sm_set_pindirs_with_mask64(PIO_VIDEO, SM_video, 3ull << beginHDMI_PIN_clk, 3ull << beginHDMI_PIN_clk);
+#else
     pio_sm_set_pins_with_mask(PIO_VIDEO, SM_video, 3u << beginHDMI_PIN_clk, 3u << beginHDMI_PIN_clk);
     pio_sm_set_pindirs_with_mask(PIO_VIDEO, SM_video, 3u << beginHDMI_PIN_clk, 3u << beginHDMI_PIN_clk);
+#endif
     //пины
 
     for (int i = 0; i < 6; i++) {
@@ -554,6 +564,12 @@ void graphics_set_buffer(uint8_t* buffer, uint16_t width, uint16_t height) {
 //выделение и настройка общих ресурсов - 4 DMA канала, PIO программ и 2 SM
 void graphics_init() {
     //настройка PIO
+#if beginHDMI_PIN_data >= 32
+    // RP2350B: GPIO32..39 are addressed through GPIO base 16 of PIO0.
+    // Must be set before any program is added to that PIO (hdmi_init below).
+    pio_set_gpio_base(PIO_VIDEO, 16);
+    pio_set_gpio_base(PIO_VIDEO_ADDR, 16);
+#endif
     SM_video = pio_claim_unused_sm(PIO_VIDEO, true);
     SM_conv = pio_claim_unused_sm(PIO_VIDEO_ADDR, true);
     //выделение и преднастройка DMA каналов

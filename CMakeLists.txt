@@ -4,23 +4,36 @@ if(WIN32)
 else()
     set(USERHOME $ENV{HOME})
 endif()
-set(sdkVersion 2.1.1)
+set(sdkVersion 2.2.0)
 set(toolchainVersion 14_2_Rel1)
-set(picotoolVersion 2.1.1)
+set(picotoolVersion 2.2.0)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
 cmake_minimum_required(VERSION 3.13)
+set(PICO_PCE_VERSION "1.1.1")
 set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
 #set(PICO_BOARD "murmulator" CACHE STRING "Board type")
 #set(PICO_BOARD "murmulator2" CACHE STRING "Board type")
 #set(PICO_BOARD "rp2040pizero" CACHE STRING "Board type")
-set(PICO_BOARD "olimex-pico-pc" CACHE STRING "Board type")
+#set(PICO_BOARD "olimex-pico-pc" CACHE STRING "Board type")
+set(PICO_BOARD "waveshare_rp2350_pizero" CACHE STRING "Board type")
 
-#set(PICO_PLATFORM "rp2350" CACHE STRING "Chip type")
-set(PICO_PLATFORM "rp2040" CACHE STRING "Chip type")
+if(${PICO_BOARD} MATCHES "waveshare_rp2350_pizero")
+    set(PICO_BOARD waveshare_rp2350_pizero CACHE STRING "Board type" FORCE)
+    set(PICO_FLASH_SIZE_BYTES 16777216 CACHE STRING "" FORCE)
+    set(I2S ON CACHE BOOL "Enable I2S sound" FORCE)
+	set(USB_HID ON CACHE BOOL "Enable I2S sound" FORCE)
+endif()
+if(${PICO_BOARD} MATCHES "olimex-pico-pc")
+    set(I2S OFF CACHE BOOL "Enable I2S sound" FORCE)
+	set(USB_HID ON CACHE BOOL "Enable I2S sound" FORCE)
+endif()
+
+set(PICO_PLATFORM "rp2350" CACHE STRING "Chip type")
+#set(PICO_PLATFORM "rp2040" CACHE STRING "Chip type")
 
 include(pico_sdk_import.cmake)
 
@@ -107,6 +120,8 @@ else()
 		SET(BUILD_NAME "m2p2-${PROJECT_NAME}")
 	elseif ( ${PICO_BOARD} MATCHES "olimex-pico-pc")
 		SET(BUILD_NAME "PCp2-${PROJECT_NAME}")
+	elseif ( ${PICO_BOARD} MATCHES "waveshare_rp2350_pizero")
+		SET(BUILD_NAME "z0p2-${PROJECT_NAME}")
 	else()
 		SET(BUILD_NAME "m1p2-${PROJECT_NAME}")
 	endif()
@@ -142,12 +157,12 @@ ENDIF()
 
 IF(NOT I2S)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIO_PWM)
-	SET(BUILD_NAME "${BUILD_NAME}-PWM")
+	SET(BUILD_NAME "${BUILD_NAME}-PWM-${PICO_PCE_VERSION}")
 ELSEIF(I2S_CS4334)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE I2S_CS4334)
-	SET(BUILD_NAME "${BUILD_NAME}-I2S-CS4334")
+	SET(BUILD_NAME "${BUILD_NAME}-I2S-CS4334-${PICO_PCE_VERSION}")
 ELSE()
-	SET(BUILD_NAME "${BUILD_NAME}-I2S-TDA1387")
+	SET(BUILD_NAME "${BUILD_NAME}-I2S-${PICO_PCE_VERSION}")
 ENDIF()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
@@ -174,8 +189,16 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_flash
 
 		tinyusb_board
-		tinyusb_device
 )
+
+if (USB_HID)
+	# The PICO-PC keyboard is a USB keyboard on the Pico's native USB port
+	# (TinyUSB host, src/hid_app.cpp); PS/2 on GPIO0/1 keeps working too.
+	target_compile_definitions(${PROJECT_NAME} PRIVATE KBDUSB)
+	target_link_libraries(${PROJECT_NAME} PRIVATE tinyusb_host)
+else()
+	target_link_libraries(${PROJECT_NAME} PRIVATE tinyusb_device)
+endif()
 
 target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --print-memory-usage --data-sections --function-sections)
 #add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

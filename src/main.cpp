@@ -2,6 +2,9 @@
 #include <cstring>
 #include <hardware/flash.h>
 #include <hardware/vreg.h>
+#if PICO_RP2350
+#include <hardware/structs/qmi.h>
+#endif
 #include <hardware/watchdog.h>
 #include <pico/multicore.h>
 #include <pico/stdlib.h>
@@ -54,6 +57,43 @@ static uint8_t fxPressedV = 0;
 static bool swap_ab = false;
 static bool ctrlPressed = false;
 static bool altPressed = false;
+
+/* PCE frame pixels are 8-bit GGGRRRBB indices into the whole palette. The
+ * HDMI text mode draws its 16 colours through palette slots 200..215
+ * (textmode_palette in drivers/hdmi/hdmi.h), which the PCE palette also
+ * owns: without swapping them the text colours come out as PCE colours
+ * (blue 201 -> green). Load CGA colours there for text mode and put the
+ * PCE colours back for graphics mode. */
+static uint32_t pce_color(const int i) {
+    return RGB888((((i & 0x1C) >> 1) * 16),
+                  (((i & 0xe0) >> 4) * 16),
+                  (((i & 0x03) << 2) * 16));
+}
+
+#ifdef HDMI
+static const uint32_t text_colors[16] = {
+    0x000000, 0x0000AA, 0x00AA00, 0x00AAAA, 0xAA0000, 0xAA00AA, 0xAA5500, 0xAAAAAA,
+    0x555555, 0x5555FF, 0x55FF55, 0x55FFFF, 0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF,
+};
+
+static void set_text_colors() {
+    for (int i = 0; i < 16; i++)
+        graphics_set_palette(textmode_palette[i], text_colors[i]);
+}
+
+static void set_game_colors() {
+    for (int i = 0; i < 16; i++)
+        graphics_set_palette(textmode_palette[i], pce_color(textmode_palette[i]));
+}
+#endif
+
+static void set_mode(const enum graphics_mode_t mode) {
+#ifdef HDMI
+    if (mode == GRAPHICSMODE_DEFAULT) set_game_colors();
+    else set_text_colors();
+#endif
+    graphics_set_mode(mode);
+}
 
 static void load_config() {
     char pathname[256];
@@ -178,7 +218,7 @@ __not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid
 
 Ps2Kbd_Mrmltr ps2kbd(
         pio1,
-        0,
+        PS2KBD_GPIO_FIRST,
         process_kbd_report
 );
 
@@ -239,7 +279,13 @@ bool filebrowser_loadfile(const char pathname[256]) {
     FILINFO fileinfo;
     f_stat(pathname, &fileinfo);
     rom_size = fileinfo.fsize;
+#if defined(PICO_PC) || defined(BOARD_Z0)
+    /* The ROM goes right after the firmware; the top 512 KB of the 4 MB flash
+     * stay untouched (pico-launcher lives in the last 260 KB). */
+    if (FLASH_TARGET_OFFSET + fileinfo.fsize > PICO_FLASH_SIZE_BYTES - (512u << 10)) {
+#else
     if (16384 - 64 << 10 < fileinfo.fsize) {
+#endif
         draw_text("ERROR: ROM too large! Canceled!!", window_x + 1, window_y + 2, 13, 1);
         sleep_ms(5000);
         return false;
@@ -250,8 +296,24 @@ bool filebrowser_loadfile(const char pathname[256]) {
 
     multicore_lockout_start_blocking();
     auto flash_target_offset = FLASH_TARGET_OFFSET;
+#if PICO_RP2350
+    /* flash_range_erase/program leave XIP through the boot-time XIP setup,
+     * which restores the QMI window-0 timing chosen for the boot clock.
+     * overclock() runs the flash with its own timing at 378+ MHz, so the
+     * boot value would clock the flash far too fast afterwards and every
+     * XIP fetch would return garbage. Keep the overclock timing. */
+    const uint32_t qmi_timing = qmi_hw->m[0].timing;
+    const uint32_t qmi_rfmt   = qmi_hw->m[0].rfmt;
+    const uint32_t qmi_rcmd   = qmi_hw->m[0].rcmd;
+#define RESTORE_QMI() do { qmi_hw->m[0].timing = qmi_timing; qmi_hw->m[0].rfmt = qmi_rfmt; \
+                           qmi_hw->m[0].rcmd = qmi_rcmd; __asm volatile ("dsb; isb" ::: "memory"); } while (0)
+#else
+#define RESTORE_QMI() do { } while (0)
+#endif
     const uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(flash_target_offset, fileinfo.fsize);
+    /* erase whole sectors: the ROM size is rarely a multiple of 4 KB */
+    flash_range_erase(flash_target_offset, (fileinfo.fsize + FLASH_SECTOR_SIZE - 1) & ~(FLASH_SECTOR_SIZE - 1));
+    RESTORE_QMI();
     restore_interrupts(ints);
 
     if (FR_OK == f_open(&file, pathname, FA_READ)) {
@@ -263,6 +325,7 @@ bool filebrowser_loadfile(const char pathname[256]) {
             if (bytes_read) {
                 const uint32_t ints = save_and_disable_interrupts();
                 flash_range_program(flash_target_offset, buffer, FLASH_PAGE_SIZE);
+                RESTORE_QMI();
                 restore_interrupts(ints);
 
                 gpio_put(PICO_DEFAULT_LED_PIN, flash_target_offset >> 13 & 1);
@@ -581,7 +644,7 @@ const MenuItem menu_items[] = {
 
 void menu() {
     bool exit = false;
-    graphics_set_mode(TEXTMODE_DEFAULT);
+    set_mode(TEXTMODE_DEFAULT);
     char footer[TEXTMODE_COLS];
     snprintf(footer, TEXTMODE_COLS, ":: %s ::", PICO_PROGRAM_NAME);
     draw_text(footer, TEXTMODE_COLS / 2 - strlen(footer) / 2, 0, 11, 1);
@@ -669,7 +732,7 @@ void menu() {
         sleep_ms(125);
     }
     save_config();
-    graphics_set_mode(GRAPHICSMODE_DEFAULT);
+    set_mode(GRAPHICSMODE_DEFAULT);
 }
 
 /* Renderer loop on Pico's second core */
@@ -683,6 +746,9 @@ void __time_critical_func(render_core)() {
     i2s_init(&i2s_config);
 
     ps2kbd.init_gpio();
+#ifdef KBDUSB
+    tuh_init(BOARD_TUH_RHPORT);
+#endif
     nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
     graphics_init();
@@ -694,14 +760,13 @@ void __time_critical_func(render_core)() {
 
     graphics_set_offset(32,0);
 
-    for (int i = 0; i < 256; i++) {
-        graphics_set_palette(i, RGB888(
-                                     (((i & 0x1C) >> 1) * 16),
-                                     (((i & 0xe0) >> 4) * 16),
-                                     (((i & 0x03) << 2) * 16)
-                             )
-        );
+    /* slot 255 is the border/background colour (graphics_set_bgcolor above) */
+    for (int i = 0; i < 255; i++) {
+        graphics_set_palette(i, pce_color(i));
     }
+#ifdef HDMI
+    set_text_colors(); // the ROM browser comes first
+#endif
 
     graphics_set_flashmode(true, true);
     sem_acquire_blocking(&vga_start_semaphore);
@@ -725,8 +790,9 @@ void __time_critical_func(render_core)() {
 
         tick = time_us_64();
 
-        // tuh_task();
-        // hid_app_task();
+#ifdef KBDUSB
+        tuh_task();
+#endif
         tight_loop_contents();
     }
 
@@ -761,10 +827,10 @@ int main() {
     load_config();
 
     while (true) {
-        graphics_set_mode(TEXTMODE_DEFAULT);
+        set_mode(TEXTMODE_DEFAULT);
         filebrowser(HOME_DIR, "pce");
         InitPCE(AUDIO_SAMPLE_RATE, true, (uint8_t *) rom, rom_size);
-        graphics_set_mode(GRAPHICSMODE_DEFAULT);
+        set_mode(GRAPHICSMODE_DEFAULT);
 
         frame = 0;
         while (!reboot) {

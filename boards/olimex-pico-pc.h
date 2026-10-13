@@ -18,8 +18,9 @@
 // PS2KBD
 #define PS2KBD_GPIO_FIRST 0
 
-// NES Gamepad
-#define NES_GPIO_CLK 8
+// NES Gamepad (UEXT). CLK on GPIO5 (UEXT pin 10): GPIO8 is the PSRAM CS
+// on this board, as in the other PCp2 builds of the pico-class kit.
+#define NES_GPIO_CLK 5
 #define NES_GPIO_LAT 9
 #define NES_GPIO_DATA 20
 #define NES_GPIO_DATA2 21
@@ -40,7 +41,8 @@
 
 #define SMS_SINGLE_FILE 1
 
-// Sound
+// Sound. With PWM the audio jack uses GPIO28 (left) and GPIO27 (right),
+// see drivers/audio/audio.c (PICO_PC); GPIO26 is DVI_CEC on this board.
 #if defined(AUDIO_PWM)
 #define AUDIO_PWM_PIN 26
 /// TODO: remove it

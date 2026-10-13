@@ -4,10 +4,11 @@
 extern "C" {
 #endif
 
-#include "inttypes.h"
-#include "stdbool.h"
+#include <pico.h>
+#include <inttypes.h>
+#include <stdbool.h>
 
-#include "hardware/pio.h"
+#include <hardware/pio.h>
 
 #define PIO_VIDEO pio0
 #define PIO_VIDEO_ADDR pio0

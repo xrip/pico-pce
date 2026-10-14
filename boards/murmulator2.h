@@ -40,7 +40,9 @@
 
 // Sound
 #if defined(AUDIO_PWM)
-#define AUDIO_PWM_PIN 9
+// PWM stereo on GP10/GP11 (one PWM slice); audio.c takes PWM_PIN0 = AUDIO_PWM_PIN & 0xfe,
+// so 9 would put it on GP8 (PSRAM CS) / GP9
+#define AUDIO_PWM_PIN 10
 #define AUDIO_DATA_PIN 9
 #define AUDIO_CLOCK_PIN 10
 #else

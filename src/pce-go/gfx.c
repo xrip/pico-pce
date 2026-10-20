@@ -10,7 +10,14 @@
 #include "graphics.h"
 
 #define LOCKED_LINES_MAX 16
-static __aligned(4) uint8_t LOCKED_LINE[XBUF_WIDTH * LOCKED_LINES_MAX] = { 0 };
+/* The first tile of a line starts (scroll_x & 7) pixels left of column 0 and
+ * a sprite may start up to 31 pixels left of it.  On the first line of the
+ * block this is before LOCKED_LINE, so keep a guard area there (it is never
+ * shown): otherwise the whole tile/sprite row is skipped as an underflow and
+ * a short colour-0 dash appears at the left edge on every block start. */
+#define LOCKED_GUARD 32
+static __aligned(4) uint8_t LOCKED_BUF[LOCKED_GUARD + XBUF_WIDTH * LOCKED_LINES_MAX + LOCKED_GUARD] = { 0 };
+#define LOCKED_LINE (LOCKED_BUF + LOCKED_GUARD)
 static int locked_line = 0;
 
 #define PAL(nibble) (PAL[(L >> ((nibble) * 4)) & 15])
@@ -359,8 +366,8 @@ gfx_init(void)
 {
 	gfx_reset(true);
     // Assume 16 columns of scratch area around our buffer.
-    framebuffer_top = LOCKED_LINE;
-    framebuffer_bottom = LOCKED_LINE + XBUF_WIDTH * LOCKED_LINES_MAX;
+    framebuffer_top = LOCKED_BUF;
+    framebuffer_bottom = LOCKED_BUF + sizeof(LOCKED_BUF);
 	return 0;
 }
 

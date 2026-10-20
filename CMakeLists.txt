@@ -53,7 +53,7 @@ option(m1p2launcher "Enable m1p2-launcher support" OFF)
 endif()
 
 #set(HDMI ON)
-set(I2S ON)
+#set(I2S ON)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -94,7 +94,7 @@ message(STATUS "")
 add_executable(${PROJECT_NAME} ${SRC})
 
 pico_set_program_name(pce "PC Engine emulator by xrip for MURMULATOR devboard")
-pico_set_program_version(pce "1.1.1")
+pico_set_program_version(pce ${PICO_PCE_VERSION})
 
 include_directories(${PROJECT_NAME} PRIVATE src)
 

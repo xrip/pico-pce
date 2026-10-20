@@ -13,13 +13,13 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 cmake_minimum_required(VERSION 3.13)
-set(PICO_PCE_VERSION "1.1.1")
+set(PICO_PCE_VERSION "1.1.2")
 set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
 #set(PICO_BOARD "murmulator" CACHE STRING "Board type")
 set(PICO_BOARD "murmulator2" CACHE STRING "Board type")
 #set(PICO_BOARD "rp2040pizero" CACHE STRING "Board type")
 #set(PICO_BOARD "olimex-pico-pc" CACHE STRING "Board type")
-set(PICO_BOARD "waveshare_rp2350_pizero" CACHE STRING "Board type")
+#set(PICO_BOARD "waveshare_rp2350_pizero" CACHE STRING "Board type")
 
 if(${PICO_BOARD} MATCHES "waveshare_rp2350_pizero")
     set(PICO_BOARD waveshare_rp2350_pizero CACHE STRING "Board type" FORCE)
@@ -52,7 +52,7 @@ if( ${PICO_PLATFORM} MATCHES "rp2350" )
 option(m1p2launcher "Enable m1p2-launcher support" OFF)
 endif()
 
-set(HDMI ON)
+#set(HDMI ON)
 #set(I2S ON)
 
 set(CMAKE_C_STANDARD 11)
@@ -94,7 +94,7 @@ message(STATUS "")
 add_executable(${PROJECT_NAME} ${SRC})
 
 pico_set_program_name(pce "PC Engine emulator by xrip for MURMULATOR devboard")
-pico_set_program_version(pce "1.1.1")
+pico_set_program_version(pce ${PICO_PCE_VERSION})
 
 include_directories(${PROJECT_NAME} PRIVATE src)
 

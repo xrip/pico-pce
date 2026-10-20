@@ -8,6 +8,10 @@
 
 #define CPU_FREQ 378
 
+// QSPI PSRAM on QMI CS1 (src/psram.c): probed at start, used for ROMs if found
+#define PSRAM_CS1_GPIO_RP2350A 19
+#define PSRAM_CS1_GPIO_RP2350B 47
+
 // SDCARD
 #define SDCARD_PIN_SPI0_CS 5
 #define SDCARD_PIN_SPI0_SCK 2

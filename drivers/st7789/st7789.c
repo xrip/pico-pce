@@ -193,7 +193,7 @@ void graphics_set_buffer(uint8_t *buffer, const uint16_t width, const uint16_t h
     graphics_buffer = buffer;
     graphics_buffer_width = width;
     graphics_buffer_height = height;
-    x_offset = graphics_buffer_width == 320 ? 16 : 0;
+    x_offset = 0; // gfx.c draws every line from column 0, in 256 and 320 modes alike
 }
 
 void graphics_set_textbuffer(uint8_t *buffer) {

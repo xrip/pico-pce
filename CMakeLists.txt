@@ -52,7 +52,7 @@ if( ${PICO_PLATFORM} MATCHES "rp2350" )
 option(m1p2launcher "Enable m1p2-launcher support" OFF)
 endif()
 
-set(HDMI ON)
+#set(HDMI ON)
 set(I2S ON)
 
 set(CMAKE_C_STANDARD 11)
